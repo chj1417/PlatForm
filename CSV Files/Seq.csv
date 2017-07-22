@@ -1,0 +1,12 @@
+TestItem,Function,Mode,Low Limit,Up Limit,Next Step,Level
+MTCP:TSCR11,function1,test,nan,nan,continue,root
+MTCP:TSCR:Child1,function1,test,-1,1,continue,child
+MTCP:TSCR:Child2,function1,test,-1,1,continue,child
+MTCP:INIT,function2,test,nan,nan,continue,root
+DPCK:Supply VDD_D&VDD_P,function3,test,-1,4,continue,root
+DPCK:Read Calypso NVM,function4,test,-1,1,continue,root
+DPCK:Measure Calypos Current(Yogi Standby),function5,test,-1,1,continue,root
+DPCK:Measure Calypos Current(Yogi Active),function6,test,-1,1,continue,root
+DPCK:Read Yogi I2C,function7,test,-1,1,continue,root
+MTCP:DPCK,function8,test,-1,1,continue,root
+MTCP:POST,function9,test,-1,1,continue,root
