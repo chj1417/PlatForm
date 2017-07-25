@@ -35,7 +35,6 @@ class TcpTool(Ui_tcptool, QDialog):
                 self.port = int(s_list[1])
                 con_ok = self.skt.connect((self.ip, self.port))
                 if(con_ok == None):
-                    #self.pb_tcpconnect.setStyleSheet("QPushButton{background-color:green;}")
                     self.pb_tcpconnect.setText('Close')
                     self.recving = True
                     self.recv_thread = threading.Thread(target=self.tcp_recv)

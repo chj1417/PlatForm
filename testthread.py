@@ -12,7 +12,6 @@ import sys
 import log
 import time
 from imp import reload
-
 sys.path.append(log.curpath + '/Scripts')
 from PyQt5 import QtCore, QtGui, QtWidgets
 from PyQt5.QtWidgets import QDialog, QMessageBox
@@ -31,7 +30,6 @@ class TestThread(QtCore.QThread):
     # 声明一个信号，同时返回一个list，同理什么都能返回啦
     finishSignal = QtCore.pyqtSignal(list)
     refresh = QtCore.pyqtSignal(list)
-    refreshlog = QtCore.pyqtSignal(str)
     refreshloop = QtCore.pyqtSignal(int)
     # 构造函数里增加形参
     def __init__(self, load,  threadnum, parent=None):
@@ -46,6 +44,7 @@ class TestThread(QtCore.QThread):
         self.stop = False
         self.loop = False
         self.looptime = 0
+        # self.loginfo = log.Log()
     def test_func(self):
         if(self.threadnum == 1):
             self.ts = testscript.TestFunc()
@@ -70,7 +69,7 @@ class TestThread(QtCore.QThread):
 
                     k = getattr(self.ts, self.load.seq_col2[i])
                     self.ret = k()
-                    self.refreshlog.emit('Test item: ' + self.load.seq_col2[i])
+                    log.loginfo.process_log('Test item: ' + self.load.seq_col2[i])
                     # 如果有子项，则需判断子项pass或fail
                     for m in range(len(self.ret)):
                         # 有子项时需索引子项的limit
@@ -96,7 +95,7 @@ class TestThread(QtCore.QThread):
                             single_result = 'Fail'
                             total_result = 'Fail'        #总的测试结果，有任何一项失败都会Fail
                 else:
-                    self.refreshlog.emit('Skip item: ' + self.load.seq_col2[i])
+                    log.loginfo.process_log('Skip item: ' + self.load.seq_col2[i])
                     self.ret = [None]
                     single_result = 'skip'
                     self.result = ['Skip']
@@ -133,7 +132,7 @@ class TestThread(QtCore.QThread):
         data_head = ['12345678', total_result, 'no error', time1, time2, str(total_time)]
         data_head.extend(total_data)
         self.load.write_csv(data_head, self.threadnum)
-        self.refreshlog.emit('total time： ' + str("%.2f" %total_time))
+        log.loginfo.process_log('total time： ' + str("%.2f" %total_time))
         self.seq_end = True
         self.finishSignal.emit([total_time, total_result, self.threadnum])
 

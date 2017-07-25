@@ -11,7 +11,10 @@ version 1.0.0
 import sys
 import csv
 import log
+import os
+import inihelper
 from PyQt5.QtGui import *
+from PyQt5.QtWidgets import *
 from PyQt5.QtWidgets import QMainWindow, QDesktopWidget, QAction
 from mainwindow import *
 from login import *
@@ -56,18 +59,19 @@ class TestSeq(Ui_MainWindow,QMainWindow):
         self.actionSerial_Debug.triggered.connect(self.serial_debug_tool)
         self.actionToolBar.triggered.connect(self.view_toolbar)
 
+        log.loginfo = log.Log()
         self.load1.load_seq()
         self.load2.load_seq()
+        log.loginfo.process_log('Load sequence')
         self.initialize_ui()
         self.initialize_seq()
 
         # 连接子进程的信号和槽函数
         self.bwThread1.finishSignal.connect(self.test_end)
         self.bwThread1.refresh.connect(self.refresh_ui)
-        self.bwThread1.refreshlog.connect(self.process_log)
+        log.loginfo.refreshlog.connect(self.refresh_log)
         self.bwThread2.finishSignal.connect(self.test_end)
         self.bwThread2.refresh.connect(self.refresh_ui2)
-        self.bwThread2.refreshlog.connect(self.process_log)
         self.bwThread1.refreshloop.connect(self.loop_refresh)
         self.bwThread2.refreshloop.connect(self.loop_refresh)
         self.zmq = zmqserver.ZmqComm()
@@ -76,8 +80,8 @@ class TestSeq(Ui_MainWindow,QMainWindow):
         self.zmq.start()
 
         # 实例化登陆类
-        self.login = UserManager()
-        self.login.loginsignal.connect(self.refresh_user)
+        global user
+        user.loginsignal.connect(self.refresh_user)
         # 实例化tcp，zmq调试工具类
         self.tcptool = TcpTool()
         self.zmqtool = ZmqTool()
@@ -91,6 +95,7 @@ class TestSeq(Ui_MainWindow,QMainWindow):
 
     # 初始化UI
     def initialize_ui(self):
+        log.loginfo.process_log('Initialize UI')
         self.lb_title.setText(inihelper.read_ini('Config', 'Title'))
         self.lb_ver.setText(inihelper.read_ini('Config', 'Version'))
         self.tabWidget.tabBar().hide()
@@ -224,6 +229,7 @@ class TestSeq(Ui_MainWindow,QMainWindow):
 
     # 初始化显示测试信息的树形结构
     def initialize_tree(self, tree, items, levels):
+        log.loginfo.process_log('Initialize sequence tree')
         tree.setColumnCount(4)
         tree.setHeaderLabels(['TestItems', 'Test Time', 'TestData', 'TestResult'])
         tree.header().setSectionResizeMode(QHeaderView.Stretch)
@@ -247,6 +253,7 @@ class TestSeq(Ui_MainWindow,QMainWindow):
 
     # 初始化编辑测试序列的表格
     def initialize_seq(self):
+        log.loginfo.process_log('Initialize edit sequence')
         self.tableseq.setRowCount(50)
         self.tableseq.setColumnCount(7)
         self.tableseq.setColumnWidth(0, self.width*0.4)
@@ -257,6 +264,7 @@ class TestSeq(Ui_MainWindow,QMainWindow):
 
     # 重新加载Sequence
     def load_sequence(self):
+        self.loginfo.process_log('Reload sequence')
         self.load1.load_seq()
         self.testlist.clear()
         self.root1 = self.initialize_tree(self.testlist, self.load1.seq_col1, self.load1.seq_col7)
@@ -266,6 +274,7 @@ class TestSeq(Ui_MainWindow,QMainWindow):
             self.root2 = self.initialize_tree(self.testlist2, self.load2.seq_col1, self.load2.seq_col7)
 
     def reload_scripts(self):
+        self.loginfo.process_log('Reload scripts')
         testthread.reload_scripts()
 
     # 循环测试时刷新UI
@@ -293,11 +302,9 @@ class TestSeq(Ui_MainWindow,QMainWindow):
 
     # 开始测试
     def test_start(self):
-        # self.bwThread1.pause = False
-        # self.bwThread2.pause = False
+        log.loginfo.process_log('Start test')
         self.bwThread1.stop = False
         self.bwThread2.stop = False
-        self.process_log('first info message!')
         self.btn_start.setDisabled(True)
         self.actionStart.setDisabled(True)
         # 开始执行 run() 函数里的内容,只有测试结束了的线程才能开始
@@ -318,43 +325,44 @@ class TestSeq(Ui_MainWindow,QMainWindow):
 
     # 测试结束后刷新UI等
     def test_end(self, ls):
-                # 使用传回的返回值
-                if (ls[2] == 1):
-                    self.le_time.setText(str(round(ls[0], 2)) + 's')
-                    self.btn_start.setDisabled(False)
-                    self.actionStart.setDisabled(False)
-                    self.le_total.setText(str(int(self.le_total.text()) + 1))
-                    self.lb_state.setText(ls[1])
-                    if ls[1] == 'Pass':
-                        self.le_pass.setText(str(int(self.le_pass.text()) + 1))
-                        # self.lb_state.setText('Pass')
-                        pe.setColor(QPalette.Window, QColor(0, 255, 0))  # 设置背景颜色
-                        self.lb_state.setPalette(pe)  # 设置label背景色
-                    else:
-                        # self.lb_state.setText('Fail')
-                        pe.setColor(QPalette.Window, QColor(255, 0, 0))  # 设置背景颜色
-                        self.lb_state.setPalette(pe)  # 设置label背景色
-                    y = int(self.le_pass.text()) / int(self.le_total.text())
-                    self.le_yield.setText(str("%.2f" % (y * 100)) + '%')
-                else:
-                    self.le_time2.setText(str(round(ls[0], 2)) + 's')
-                    self.btn_start.setDisabled(False)
-                    self.actionStart.setDisabled(False)
-                    self.le_total2.setText(str(int(self.le_total2.text()) + 1))
-                    if ls[1] == 'Pass':
-                        self.le_pass2.setText(str(int(self.le_pass2.text()) + 1))
-                        self.lb_state2.setText('Pass')
-                        pe2.setColor(QPalette.Window, QColor(0, 255, 0))  # 设置背景颜色
-                        self.lb_state2.setPalette(pe2)  # 设置label背景色
-                    else:
-                        self.lb_state2.setText('Fail')
-                        pe2.setColor(QPalette.Window, QColor(255, 0, 0))  # 设置背景颜色
-                        self.lb_state2.setPalette(pe2)  # 设置label背景色
-                    y = int(self.le_pass2.text()) / int(self.le_total2.text())
-                    self.le_yield2.setText(str("%.2f" % (y * 100)) + '%')
+        # 使用传回的返回值
+        if (ls[2] == 1):
+            self.le_time.setText(str(round(ls[0], 2)) + 's')
+            self.btn_start.setDisabled(False)
+            self.actionStart.setDisabled(False)
+            self.le_total.setText(str(int(self.le_total.text()) + 1))
+            self.lb_state.setText(ls[1])
+            if ls[1] == 'Pass':
+                self.le_pass.setText(str(int(self.le_pass.text()) + 1))
+                # self.lb_state.setText('Pass')
+                pe.setColor(QPalette.Window, QColor(0, 255, 0))  # 设置背景颜色
+                self.lb_state.setPalette(pe)  # 设置label背景色
+            else:
+                # self.lb_state.setText('Fail')
+                pe.setColor(QPalette.Window, QColor(255, 0, 0))  # 设置背景颜色
+                self.lb_state.setPalette(pe)  # 设置label背景色
+            y = int(self.le_pass.text()) / int(self.le_total.text())
+            self.le_yield.setText(str("%.2f" % (y * 100)) + '%')
+        else:
+            self.le_time2.setText(str(round(ls[0], 2)) + 's')
+            self.btn_start.setDisabled(False)
+            self.actionStart.setDisabled(False)
+            self.le_total2.setText(str(int(self.le_total2.text()) + 1))
+            if ls[1] == 'Pass':
+                self.le_pass2.setText(str(int(self.le_pass2.text()) + 1))
+                self.lb_state2.setText('Pass')
+                pe2.setColor(QPalette.Window, QColor(0, 255, 0))  # 设置背景颜色
+                self.lb_state2.setPalette(pe2)  # 设置label背景色
+            else:
+                self.lb_state2.setText('Fail')
+                pe2.setColor(QPalette.Window, QColor(255, 0, 0))  # 设置背景颜色
+                self.lb_state2.setPalette(pe2)  # 设置label背景色
+            y = int(self.le_pass2.text()) / int(self.le_total2.text())
+            self.le_yield2.setText(str("%.2f" % (y * 100)) + '%')
 
     # 中止测试
     def test_break(self):
+        self.loginfo.process_log('Break test')
         self.bwThread1.stop = True
         self.bwThread2.stop = True
         self.lb_state.setText('Break')
@@ -362,6 +370,7 @@ class TestSeq(Ui_MainWindow,QMainWindow):
 
     # 暂停测试
     def test_pause(self):
+        self.loginfo.process_log('Pause test')
         self.bwThread1.pause = True
         self.bwThread2.pause = True
         self.actionPause.setDisabled(True)
@@ -369,6 +378,7 @@ class TestSeq(Ui_MainWindow,QMainWindow):
 
     # 开启或关闭单步测试
     def step_test(self):
+        self.loginfo.process_log('Step test')
         if(self.mystepbar.isChecked()):
             self.bwThread1.pause = True
             self.bwThread2.pause = True
@@ -582,7 +592,8 @@ class TestSeq(Ui_MainWindow,QMainWindow):
 
     # 切换用户
     def change_user(self):
-        self.login.show()
+        global user
+        user.show()
 
     # 刷新用户
     def refresh_user(self, ls):
@@ -672,14 +683,10 @@ class TestSeq(Ui_MainWindow,QMainWindow):
         if(ls[0] == 'Start'):
             self.test_start()
         if (ls[0] == 'ServerStart'):
-            print('zmq')
             self.lb_zmqstate.setStyleSheet('background-color: rgb(0, 237, 0);')
 
-    # 编辑测试log，添加时间信息
-    def process_log(self,msg):
-        logger.debug(msg)
-        st = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time.time()))
-        self.te_log.append(st + ' - ' + msg)
+    def refresh_log(self, msg):
+        self.te_log.append(msg)
 
 if __name__ == '__main__':
     '''
@@ -690,6 +697,7 @@ if __name__ == '__main__':
     if(not os.path.exists(scriptpath)):
         QMessageBox.information(None, ("Warning!"), ("Script Error!"), QMessageBox.StandardButton(QMessageBox.Ok))
     else:
+        global user
         user = UserManager()
         user.show()
         # 等待对话框结束

@@ -15,37 +15,52 @@ import sys
 import os
 import inihelper
 from PyQt5.QtWidgets import *
+from PyQt5 import QtCore
 import systempath
 
-date = time.strftime('%Y-%m-%d', time.localtime(time.time()))
 curpath = systempath.bundle_dir
-LOG_FILE = curpath + '/Log/' + date+'.log'
+global loginfo
 
-# 创建一个logger
-logger = logging.getLogger('mylogger')
-logger.setLevel(logging.DEBUG)
+class Log(QtCore.QObject):
+    refreshlog = QtCore.pyqtSignal(str)
+    def __init__(self, parent=None):
+        QtCore.QObject.__init__(self)
+        # super(Log, self).__init__(parent)
+        global curpath, logger
+        date = time.strftime('%Y-%m-%d', time.localtime(time.time()))
+        self.LOG_FILE = curpath + '/Log/' + date+'.log'
+        # 创建一个handler，用于写入日志文件
+        self.logger = logging.getLogger('mylogger')
 
-# 创建一个handler，用于写入日志文件
-fh = logging.FileHandler(LOG_FILE)
-fh.setLevel(logging.DEBUG)
 
-# 再创建一个handler，用于输出到控制台
-ch = logging.StreamHandler()
-ch.setLevel(logging.DEBUG)
+    def init_log(self):
+        # 创建一个handler，用于写入日志文件
+        self.logger.setLevel(logging.DEBUG)
+        self.fh = logging.FileHandler(self.LOG_FILE)
+        self.fh.setLevel(logging.DEBUG)
 
-# 定义handler的输出格式
-formatter = logging.Formatter('%(asctime)s - %(filename)s:%(lineno)s - %(name)s - %(message)s')
-fh.setFormatter(formatter)
-ch.setFormatter(formatter)
+        # 再创建一个handler，用于输出到控制台
+        self.ch = logging.StreamHandler()
+        self.ch.setLevel(logging.DEBUG)
 
-# 给logger添加handler
-logger.addHandler(fh)
-logger.addHandler(ch)
+        # 定义handler的输出格式
+        formatter = logging.Formatter('%(asctime)s - %(filename)s:%(lineno)s - %(name)s - %(message)s')
+        self.fh.setFormatter(formatter)
+        self.ch.setFormatter(formatter)
+
+        # 给logger添加handler
+        self.logger.addHandler(self.fh)
+        self.logger.addHandler(self.ch)
+
+    def process_log(self, msg):
+        self.logger.debug(msg)
+        st = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time.time()))
+        self.refreshlog.emit(st + ' - ' + msg)
 
 stationnum = '1'
 class Load(QMainWindow):
     def __init__(self, path, parent=None):
-        global curpath
+        global curpath, loginfo
         self.path = curpath + '/CSV Files/' + path
         self.seq_col1 = []
         self.seq_col2 = []

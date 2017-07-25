@@ -1,0 +1,71 @@
+2017-07-25 14:02:15,015 - log.py:56 - mylogger - Administrator login
+2017-07-25 14:02:15,068 - log.py:56 - mylogger - Initialize UI
+2017-07-25 14:02:17,116 - log.py:56 - mylogger - Start test
+2017-07-25 14:02:17,337 - log.py:56 - mylogger - Test item: function1
+2017-07-25 14:02:17,650 - log.py:56 - mylogger - Test item: function2
+2017-07-25 14:02:17,858 - log.py:56 - mylogger - Test item: function3
+2017-07-25 14:02:17,971 - log.py:56 - mylogger - Test item: function4
+2017-07-25 14:02:18,180 - log.py:56 - mylogger - Test item: function5
+2017-07-25 14:02:18,593 - log.py:56 - mylogger - Test item: function6
+2017-07-25 14:02:18,907 - log.py:56 - mylogger - Test item: function7
+2017-07-25 14:02:19,409 - log.py:56 - mylogger - Test item: function8
+2017-07-25 14:02:19,619 - log.py:56 - mylogger - Test item: function9
+2017-07-25 14:02:19,637 - log.py:56 - mylogger - total time： 2.42
+2017-07-25 14:07:20,263 - log.py:56 - mylogger - Administrator login
+2017-07-25 14:07:20,329 - log.py:56 - mylogger - Initialize UI
+2017-07-25 14:08:27,140 - log.py:56 - mylogger - Administrator login
+2017-07-25 14:08:27,199 - log.py:56 - mylogger - Initialize UI
+2017-07-25 14:08:43,392 - log.py:56 - mylogger - Administrator login
+2017-07-25 14:08:43,448 - log.py:56 - mylogger - Initialize UI
+2017-07-25 14:09:04,586 - log.py:56 - mylogger - Administrator login
+2017-07-25 14:09:04,640 - log.py:56 - mylogger - Initialize UI
+2017-07-25 14:09:04,658 - log.py:56 - mylogger - ZMQ Server Start...
+2017-07-25 14:19:46,855 - log.py:56 - mylogger - Administrator login
+2017-07-25 14:19:46,915 - log.py:56 - mylogger - Initialize UI
+2017-07-25 14:19:46,937 - log.py:56 - mylogger - ZMQ Server Start...
+2017-07-25 14:21:15,484 - log.py:56 - mylogger - Administrator login
+2017-07-25 14:21:15,535 - log.py:56 - mylogger - Initialize UI
+2017-07-25 14:21:15,553 - log.py:56 - mylogger - ZMQ Server Start-Port:5555
+2017-07-25 14:21:27,805 - log.py:56 - mylogger - Administrator login
+2017-07-25 14:21:27,854 - log.py:56 - mylogger - Initialize UI
+2017-07-25 14:21:27,871 - log.py:56 - mylogger - ZMQ Server Start, Port:5555
+2017-07-25 14:21:44,392 - log.py:56 - mylogger - Administrator login
+2017-07-25 14:21:44,444 - log.py:56 - mylogger - Initialize UI
+2017-07-25 14:21:44,460 - log.py:56 - mylogger - ZMQ Server Start, Port: 5555
+2017-07-25 14:28:29,345 - log.py:56 - mylogger - Administrator login
+2017-07-25 14:28:38,153 - log.py:56 - mylogger - Administrator login
+2017-07-25 14:28:38,204 - log.py:56 - mylogger - Load sequence
+2017-07-25 14:28:38,206 - log.py:56 - mylogger - Load sequence
+2017-07-25 14:28:38,206 - log.py:56 - mylogger - Initialize UI
+2017-07-25 14:28:38,235 - log.py:56 - mylogger - ZMQ Server Start, Port: 5555
+2017-07-25 14:29:03,292 - log.py:56 - mylogger - Administrator login
+2017-07-25 14:29:39,806 - log.py:56 - mylogger - Administrator login
+2017-07-25 14:30:23,924 - log.py:56 - mylogger - Administrator login
+2017-07-25 14:30:23,977 - log.py:56 - mylogger - Load sequence
+2017-07-25 14:30:23,978 - log.py:56 - mylogger - Load sequence
+2017-07-25 14:30:23,979 - log.py:56 - mylogger - Initialize UI
+2017-07-25 14:30:24,001 - log.py:56 - mylogger - ZMQ Server Start, Port: 5555
+2017-07-25 14:35:27,687 - log.py:56 - mylogger - Administrator login
+2017-07-25 14:35:27,750 - log.py:56 - mylogger - Load sequence
+2017-07-25 14:35:27,750 - log.py:56 - mylogger - Initialize UI
+2017-07-25 14:36:21,238 - log.py:56 - mylogger - Administrator login
+2017-07-25 14:36:21,293 - log.py:56 - mylogger - Load sequence
+2017-07-25 14:36:21,293 - log.py:56 - mylogger - Initialize UI
+2017-07-25 14:36:21,307 - log.py:56 - mylogger - Initialize sequence tree
+2017-07-25 14:36:29,761 - log.py:56 - mylogger - Administrator login
+2017-07-25 14:36:29,818 - log.py:56 - mylogger - Load sequence
+2017-07-25 14:36:29,818 - log.py:56 - mylogger - Initialize UI
+2017-07-25 14:36:29,834 - log.py:56 - mylogger - Initialize sequence tree
+2017-07-25 14:36:29,836 - log.py:56 - mylogger - Initialize edit sequence
+2017-07-25 14:36:29,845 - log.py:56 - mylogger - ZMQ Server Start, Port: 5555
+2017-07-25 14:36:32,283 - log.py:56 - mylogger - Start test
+2017-07-25 14:36:32,505 - log.py:56 - mylogger - Test item: function1
+2017-07-25 14:36:32,814 - log.py:56 - mylogger - Test item: function2
+2017-07-25 14:36:33,021 - log.py:56 - mylogger - Test item: function3
+2017-07-25 14:36:33,142 - log.py:56 - mylogger - Test item: function4
+2017-07-25 14:36:33,348 - log.py:56 - mylogger - Test item: function5
+2017-07-25 14:36:33,754 - log.py:56 - mylogger - Test item: function6
+2017-07-25 14:36:34,063 - log.py:56 - mylogger - Test item: function7
+2017-07-25 14:36:34,568 - log.py:56 - mylogger - Test item: function8
+2017-07-25 14:36:34,781 - log.py:56 - mylogger - Test item: function9
+2017-07-25 14:36:34,786 - log.py:56 - mylogger - total time： 2.44

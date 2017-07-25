@@ -11,6 +11,8 @@ version 1.0.0
 import time
 import zmq
 from PyQt5 import QtCore
+import log
+import inihelper
 
 # zmq线程类
 class ZmqComm(QtCore.QThread):
@@ -22,10 +24,11 @@ class ZmqComm(QtCore.QThread):
         self.message = ''
 
     def zmq_server(self):
+        self.port = inihelper.read_ini('Config', 'ZMQPort')
         context = zmq.Context()
         socket = context.socket(zmq.REP)
-        socket.bind("tcp://*:5555")
-        print('ZMQ Server Start...')
+        socket.bind('tcp://*:%s'%self.port)
+        log.loginfo.process_log('ZMQ Server Start, Port: ' + self.port)
         self.zmqrecvsingnal.emit(['ServerStart'])
         while True:
             self.message = socket.recv_string()
@@ -35,6 +38,7 @@ class ZmqComm(QtCore.QThread):
             socket.send_string(msg)
             self.zmqsendsingnal.emit([msg])
         self.zmqrecvsingnal.emit(['ServerStop'])
+        log.loginfo.process_log('ZMQ Server Stop')
 
     # 重写 run() 函数，在该线程中执行测试函数
     def run(self):

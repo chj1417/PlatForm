@@ -8,10 +8,10 @@ Update date：2017.7.20
 version 1.0.0
 """
 
-from PyQt5.QtWidgets import QDialog, QMessageBox
+from PyQt5.QtWidgets import QDialog, QMessageBox, QDesktopWidget
 from PyQt5.QtGui import QPixmap
 from loginwindow import *
-from log import *
+import log
 
 class UserManager(Ui_login,QDialog):
     loginsignal = QtCore.pyqtSignal(list)
@@ -35,8 +35,10 @@ class UserManager(Ui_login,QDialog):
         self.pb_login.setMaximumWidth(self.width * 0.1)
         self.pb_exit.setMaximumWidth(self.width * 0.1)
         self.le_pwd.setFocus()
-        pixMap = QPixmap(curpath + '/Resource/user.png')
+        pixMap = QPixmap(log.curpath + '/Resource/user.png')
         self.lb_image.setPixmap(pixMap)
+        log.loginfo = log.Log()
+        log.loginfo.init_log()
 
     def exit(self):
         UserManager.loginok = False
@@ -56,7 +58,7 @@ class UserManager(Ui_login,QDialog):
 
     def userlogin(self):
         if((self.cb_user.currentIndex()==0) and (self.le_pwd.text() == '1')):
-            logger.info('Administrator login')
+            log.loginfo.process_log('Administrator login')
             UserManager.username = 'Administrator'
             self.loginsignal.emit(['Administrator'])
             UserManager.loginok = True
@@ -66,7 +68,7 @@ class UserManager(Ui_login,QDialog):
                 QMessageBox.information(self, ("Warning!"), ("Invalid operator!"),
                                         QMessageBox.StandardButton(QMessageBox.Ok))
             else:
-                logger.info('Operator ' + self.le_pwd.text() + ' login')
+                log.loginfo.process_log('Operator ' + self.le_pwd.text() + ' login')
                 UserManager.username = self.le_pwd.text()
                 self.loginsignal.emit([self.le_pwd.text()])
             UserManager.loginok = True
