@@ -15,7 +15,10 @@ import time
 import threading
 from PyQt5 import QtCore
 from Scripts.automationscript import *
+import systempath
+import sys
 import log
+
 
 class Motion(QtCore.QThread):
     iosingnal = QtCore.pyqtSignal(list)
@@ -27,7 +30,7 @@ class Motion(QtCore.QThread):
         self.io_state = [0,0,0,1,1,1,0,1,1,0]
 
     def read_motion_config(self):
-        self.path = log.curpath + '/CSV Files/' + 'IO Config.csv'
+        self.path = systempath.bundle_dir + '/CSV Files/' + 'IO Config.csv'
         csvfile = open(self.path, 'r')
         reader = csv.reader(csvfile)
         self.io_name = []

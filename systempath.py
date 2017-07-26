@@ -9,6 +9,7 @@ version 1.0.0
 """
 
 import sys, os
+
 frozen = 'not'
 
 if getattr(sys, 'frozen', False):
@@ -19,3 +20,4 @@ if getattr(sys, 'frozen', False):
 else:
     # we are running in a normal Python environment
     bundle_dir = os.path.dirname(os.path.abspath(__file__))
+

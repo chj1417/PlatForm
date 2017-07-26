@@ -11,6 +11,10 @@ version 1.0.0
 from PyQt5.QtWidgets import QDialog, QMessageBox, QDesktopWidget
 from PyQt5.QtGui import QPixmap
 from loginwindow import *
+import systempath
+import sys
+sys.path.append(systempath.bundle_dir + '/Module')
+sys.path.append(systempath.bundle_dir + '/Scripts')
 import log
 
 class UserManager(Ui_login,QDialog):
@@ -35,7 +39,7 @@ class UserManager(Ui_login,QDialog):
         self.pb_login.setMaximumWidth(self.width * 0.1)
         self.pb_exit.setMaximumWidth(self.width * 0.1)
         self.le_pwd.setFocus()
-        pixMap = QPixmap(log.curpath + '/Resource/user.png')
+        pixMap = QPixmap(systempath.bundle_dir + '/Resource/user.png')
         self.lb_image.setPixmap(pixMap)
         log.loginfo = log.Log()
         log.loginfo.init_log()

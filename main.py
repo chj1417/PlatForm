@@ -8,8 +8,11 @@ Update date：2017.7.20
 version 1.0.0
 """
 
+from login import *
+import systempath
 import sys
 import csv
+import load
 import log
 import os
 import inihelper
@@ -17,13 +20,13 @@ from PyQt5.QtGui import *
 from PyQt5.QtWidgets import *
 from PyQt5.QtWidgets import QMainWindow, QDesktopWidget, QAction
 from mainwindow import *
-from login import *
 from tcptool import *
 from zmqtool import *
 from serialtool import *
 from motioncontrol import *
 import testthread
 import zmqserver
+
 
 class TestSeq(Ui_MainWindow,QMainWindow):
     def __init__(self, parent=None):
@@ -34,8 +37,8 @@ class TestSeq(Ui_MainWindow,QMainWindow):
         # 两个树形控件的root items
         self.root1 = []
         self.root2 = []
-        self.load1 = log.Load('Seq.csv')
-        self.load2 = log.Load('Seq2.csv')
+        self.load1 = load.Load('Seq.csv')
+        self.load2 = load.Load('Seq2.csv')
         self.bwThread1 = testthread.TestThread(self.load1, 1)
         self.bwThread2 = testthread.TestThread(self.load2, 2)
         self.setupUi(self)
@@ -149,13 +152,13 @@ class TestSeq(Ui_MainWindow,QMainWindow):
 
         # 初始化工具栏
         icon1 = QtGui.QIcon()
-        icon1.addPixmap(QtGui.QPixmap(log.curpath + "/Resource/start.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
+        icon1.addPixmap(QtGui.QPixmap(systempath.bundle_dir + "/Resource/start.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
         icon2 = QtGui.QIcon()
-        icon2.addPixmap(QtGui.QPixmap(log.curpath + "/Resource/stop.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
+        icon2.addPixmap(QtGui.QPixmap(systempath.bundle_dir + "/Resource/stop.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
         icon3 = QtGui.QIcon()
-        icon3.addPixmap(QtGui.QPixmap(log.curpath + "/Resource/home.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
+        icon3.addPixmap(QtGui.QPixmap(systempath.bundle_dir + "/Resource/home.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
         icon4 = QtGui.QIcon()
-        icon4.addPixmap(QtGui.QPixmap(log.curpath + "/Resource/refresh.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
+        icon4.addPixmap(QtGui.QPixmap(systempath.bundle_dir + "/Resource/refresh.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
         self.actionStart.setIcon(icon1)
         self.actionStop.setIcon(icon2)
         self.actionMainwindow.setIcon(icon3)
@@ -264,7 +267,7 @@ class TestSeq(Ui_MainWindow,QMainWindow):
 
     # 重新加载Sequence
     def load_sequence(self):
-        self.loginfo.process_log('Reload sequence')
+        log.loginfo.process_log('Reload sequence')
         self.load1.load_seq()
         self.testlist.clear()
         self.root1 = self.initialize_tree(self.testlist, self.load1.seq_col1, self.load1.seq_col7)
@@ -274,7 +277,7 @@ class TestSeq(Ui_MainWindow,QMainWindow):
             self.root2 = self.initialize_tree(self.testlist2, self.load2.seq_col1, self.load2.seq_col7)
 
     def reload_scripts(self):
-        self.loginfo.process_log('Reload scripts')
+        log.loginfo.process_log('Reload scripts')
         testthread.reload_scripts()
 
     # 循环测试时刷新UI
@@ -362,7 +365,7 @@ class TestSeq(Ui_MainWindow,QMainWindow):
 
     # 中止测试
     def test_break(self):
-        self.loginfo.process_log('Break test')
+        log.loginfo.process_log('Break test')
         self.bwThread1.stop = True
         self.bwThread2.stop = True
         self.lb_state.setText('Break')
@@ -370,7 +373,7 @@ class TestSeq(Ui_MainWindow,QMainWindow):
 
     # 暂停测试
     def test_pause(self):
-        self.loginfo.process_log('Pause test')
+        log.loginfo.process_log('Pause test')
         self.bwThread1.pause = True
         self.bwThread2.pause = True
         self.actionPause.setDisabled(True)
@@ -378,7 +381,7 @@ class TestSeq(Ui_MainWindow,QMainWindow):
 
     # 开启或关闭单步测试
     def step_test(self):
-        self.loginfo.process_log('Step test')
+        log.loginfo.process_log('Step test')
         if(self.mystepbar.isChecked()):
             self.bwThread1.pause = True
             self.bwThread2.pause = True
@@ -551,9 +554,9 @@ class TestSeq(Ui_MainWindow,QMainWindow):
     # 保存测试序列信息
     def save_sequence(self):
         if (self.cb_seq.currentIndex() == 0):
-            filepath = log.curpath + '/CSV Files/Seq.csv'
+            filepath = systempath.bundle_dir + '/CSV Files/Seq.csv'
         else:
-            filepath = log.curpath + '/CSV Files/Seq2.csv'
+            filepath = systempath.bundle_dir + '/CSV Files/Seq2.csv'
         f = open(filepath, 'w')
         writer = csv.writer(f)
         writer.writerow(['TestItem', 'Function', 'Mode', 'Low Limit', 'Up Limit', 'Next Step', 'Level'])
@@ -692,7 +695,7 @@ if __name__ == '__main__':
     '''
     主函数
     '''
-    scriptpath = log.curpath+'/Scripts/testscript.py'
+    scriptpath = systempath.bundle_dir+'/Scripts/testscript.py'
     app = QApplication(sys.argv)
     if(not os.path.exists(scriptpath)):
         QMessageBox.information(None, ("Warning!"), ("Script Error!"), QMessageBox.StandardButton(QMessageBox.Ok))

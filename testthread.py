@@ -9,10 +9,11 @@ version 1.0.0
 """
 
 import sys
+import systempath
 import log
 import time
 from imp import reload
-sys.path.append(log.curpath + '/Scripts')
+sys.path.append(systempath.bundle_dir + '/Scripts')
 from PyQt5 import QtCore, QtGui, QtWidgets
 from PyQt5.QtWidgets import QDialog, QMessageBox
 try:
