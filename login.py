@@ -43,6 +43,7 @@ class UserManager(Ui_login,QDialog):
         self.lb_image.setPixmap(pixMap)
         log.loginfo = log.Log()
         log.loginfo.init_log()
+        self.le_pwd.setText('')
 
     def exit(self):
         UserManager.loginok = False
@@ -53,6 +54,7 @@ class UserManager(Ui_login,QDialog):
         self.accept()
 
     def userchange(self):
+        self.le_pwd.setText('')
         if(self.cb_user.currentIndex()==0):
             self.lb_pwd.setText('PassWord:')
             self.le_pwd.setEchoMode(2)

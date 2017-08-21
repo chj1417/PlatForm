@@ -22,7 +22,6 @@ except Exception as e:
     print(e)
 import copy
 
-
 def reload_scripts():
     reload(testscript)
 
@@ -45,7 +44,6 @@ class TestThread(QtCore.QThread):
         self.stop = False
         self.loop = False
         self.looptime = 0
-        # self.loginfo = log.Log()
     def test_func(self):
         if(self.threadnum == 1):
             self.ts = testscript.TestFunc()
@@ -105,7 +103,6 @@ class TestThread(QtCore.QThread):
                     total_data.append('nan')
                 for n in range (len(self.ret)):
                     total_data.append(str(self.ret[n]))
-
                 # 统计测试时间
                 et_int = time.time()
                 et = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(et_int))
@@ -124,11 +121,9 @@ class TestThread(QtCore.QThread):
                 # 判断失败后是否跳出测试
                 if (self.load.seq_col6[i] == 'finish' and single_result == 'Fail'):
                     break
-
                 j = j + 1
             i = i + 1
-        # 更新测试时间和测试结果
-        # 保存测试结果
+        # 更新测试时间和测试结果，保存测试结果
         time2 = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time.time()))
         data_head = ['12345678', total_result, 'no error', time1, time2, str(total_time)]
         data_head.extend(total_data)

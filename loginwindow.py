@@ -1,12 +1,10 @@
-# -*- coding: UTF-8 -*-
-"""
-FileName: loginwindow.py
-Author: jiaminbit@sina.com
-Create date: 2017.6.20
-description: login UI
-Update date：2017.7.20
-version 1.0.0
-"""
+# -*- coding: utf-8 -*-
+
+# Form implementation generated from reading ui file '/Users/jiamin/Desktop/Develop/Python/Program/TestUI/login.ui'
+#
+# Created by: PyQt5 UI code generator 5.8.2
+#
+# WARNING! All changes made in this file will be lost!
 
 from PyQt5 import QtCore, QtGui, QtWidgets
 
@@ -42,6 +40,9 @@ class Ui_login(object):
         sizePolicy.setVerticalStretch(0)
         sizePolicy.setHeightForWidth(self.le_pwd.sizePolicy().hasHeightForWidth())
         self.le_pwd.setSizePolicy(sizePolicy)
+        font = QtGui.QFont()
+        font.setPointSize(13)
+        self.le_pwd.setFont(font)
         self.le_pwd.setEchoMode(QtWidgets.QLineEdit.Password)
         self.le_pwd.setObjectName("le_pwd")
         self.gridLayout.addWidget(self.le_pwd, 2, 3, 1, 1)
@@ -51,6 +52,9 @@ class Ui_login(object):
         sizePolicy.setVerticalStretch(0)
         sizePolicy.setHeightForWidth(self.lb_pwd.sizePolicy().hasHeightForWidth())
         self.lb_pwd.setSizePolicy(sizePolicy)
+        font = QtGui.QFont()
+        font.setPointSize(13)
+        self.lb_pwd.setFont(font)
         self.lb_pwd.setObjectName("lb_pwd")
         self.gridLayout.addWidget(self.lb_pwd, 2, 1, 1, 1)
         self.cb_user = QtWidgets.QComboBox(login)
@@ -59,6 +63,9 @@ class Ui_login(object):
         sizePolicy.setVerticalStretch(0)
         sizePolicy.setHeightForWidth(self.cb_user.sizePolicy().hasHeightForWidth())
         self.cb_user.setSizePolicy(sizePolicy)
+        font = QtGui.QFont()
+        font.setPointSize(13)
+        self.cb_user.setFont(font)
         self.cb_user.setObjectName("cb_user")
         self.cb_user.addItem("")
         self.cb_user.addItem("")
@@ -69,6 +76,9 @@ class Ui_login(object):
         sizePolicy.setVerticalStretch(0)
         sizePolicy.setHeightForWidth(self.lb_user.sizePolicy().hasHeightForWidth())
         self.lb_user.setSizePolicy(sizePolicy)
+        font = QtGui.QFont()
+        font.setPointSize(13)
+        self.lb_user.setFont(font)
         self.lb_user.setObjectName("lb_user")
         self.gridLayout.addWidget(self.lb_user, 1, 1, 1, 1)
         self.lb_image = QtWidgets.QLabel(login)
@@ -83,6 +93,9 @@ class Ui_login(object):
         sizePolicy.setHeightForWidth(self.pb_login.sizePolicy().hasHeightForWidth())
         self.pb_login.setSizePolicy(sizePolicy)
         self.pb_login.setMaximumSize(QtCore.QSize(100, 200))
+        font = QtGui.QFont()
+        font.setPointSize(13)
+        self.pb_login.setFont(font)
         self.pb_login.setLayoutDirection(QtCore.Qt.LeftToRight)
         self.pb_login.setObjectName("pb_login")
         self.gridLayout.addWidget(self.pb_login, 4, 1, 1, 1)
@@ -93,6 +106,9 @@ class Ui_login(object):
         sizePolicy.setHeightForWidth(self.pb_exit.sizePolicy().hasHeightForWidth())
         self.pb_exit.setSizePolicy(sizePolicy)
         self.pb_exit.setMaximumSize(QtCore.QSize(100, 16777215))
+        font = QtGui.QFont()
+        font.setPointSize(13)
+        self.pb_exit.setFont(font)
         self.pb_exit.setLayoutDirection(QtCore.Qt.LeftToRight)
         self.pb_exit.setObjectName("pb_exit")
         self.gridLayout.addWidget(self.pb_exit, 4, 3, 1, 1)

@@ -17,16 +17,17 @@ import log
 import os
 import inihelper
 from PyQt5.QtGui import *
+from PyQt5.QtCore import *
 from PyQt5.QtWidgets import *
 from PyQt5.QtWidgets import QMainWindow, QDesktopWidget, QAction
 from mainwindow import *
 from tcptool import *
 from zmqtool import *
 from serialtool import *
-from motioncontrol import *
+import motionthread
 import testthread
 import zmqserver
-
+import visionthread
 
 class TestSeq(Ui_MainWindow,QMainWindow):
     def __init__(self, parent=None):
@@ -34,6 +35,7 @@ class TestSeq(Ui_MainWindow,QMainWindow):
         self.screen = QDesktopWidget().screenGeometry()
         self.width = self.screen.width()
         self.height = self.screen.height()
+        print(self.winId())
         # 两个树形控件的root items
         self.root1 = []
         self.root2 = []
@@ -61,8 +63,10 @@ class TestSeq(Ui_MainWindow,QMainWindow):
         self.actionTcp_Debug.triggered.connect(self.tcp_debug_tool)
         self.actionSerial_Debug.triggered.connect(self.serial_debug_tool)
         self.actionToolBar.triggered.connect(self.view_toolbar)
+        self.actionVision_Window.triggered.connect(self.switch_to_visionwindow)
 
         log.loginfo = log.Log()
+        log.loginfo.refreshlog.connect(self.refresh_log)
         self.load1.load_seq()
         self.load2.load_seq()
         log.loginfo.process_log('Load sequence')
@@ -72,7 +76,6 @@ class TestSeq(Ui_MainWindow,QMainWindow):
         # 连接子进程的信号和槽函数
         self.bwThread1.finishSignal.connect(self.test_end)
         self.bwThread1.refresh.connect(self.refresh_ui)
-        log.loginfo.refreshlog.connect(self.refresh_log)
         self.bwThread2.finishSignal.connect(self.test_end)
         self.bwThread2.refresh.connect(self.refresh_ui2)
         self.bwThread1.refreshloop.connect(self.loop_refresh)
@@ -91,10 +94,29 @@ class TestSeq(Ui_MainWindow,QMainWindow):
         # 连接zmq发送接收信号，显示信息到调试工具界面
         self.zmq.zmqrecvsingnal.connect(self.zmqtool.display_recv_msg)
         self.zmq.zmqsendsingnal.connect(self.zmqtool.display_send_msg)
+
         # 实例化手动控制类
-        self.motion = Motion()
+        self.motion = motionthread.Motion()
         self.motion.iosingnal.connect(self.refresh_motion_para)
+        self.pb_jog1.pressed.connect(self.jog_forward)
+        self.pb_jog1.released.connect(self.axis_stop)
+        self.pb_jog2.pressed.connect(self.jog_backward)
+        self.pb_jog2.released.connect(self.axis_stop)
+        self.pb_stop.clicked.connect(self.axis_stop)
+        self.pb_absolute.clicked.connect(self.absolute_run)
+        self.pb_relative.clicked.connect(self.relative_run)
+        self.cb_axis.currentIndexChanged.connect(self.change_axis)
+        self.pb_reset.clicked.connect(self.axis_reset)
         self.serialtool = SerialTool()
+
+        # 视觉界面槽函数连接
+        self.vision = visionthread.VisionThread()
+        self.pb_loadimg.clicked.connect(self.load_image)
+        self.pb_opencamera.clicked.connect(self.open_camera)
+        self.pb_snap.clicked.connect(self.snap)
+        self.pb_live.clicked.connect(self.live)
+        self.vision.imgsignal.connect(self.refresh_image)
+        #self.vision.init_win(self.lb_image.)
 
     # 初始化UI
     def initialize_ui(self):
@@ -123,32 +145,21 @@ class TestSeq(Ui_MainWindow,QMainWindow):
         # 初始化各控件大小
         self.setMinimumHeight(self.height * 0.5)
         self.setMinimumWidth(self.width * 0.5)
-        self.lb_title.setFixedHeight(self.height * 0.1)
+        self.lb_title.setFixedHeight(self.height * 0.08)
         self.le_main_user.setMaximumWidth(self.width * 0.1)
 
         self.lb_ver.setMaximumHeight(self.height * 0.015)
         self.lb_ver.setMaximumWidth(self.width * 0.06)
-        self.lb_zmqtitle.setMaximumWidth(self.width * 0.05)
-        self.lb_zmqstate.setMaximumWidth(self.width * 0.01)
-        self.lb_seqtitle.setMaximumWidth(self.width * 0.05)
-        self.lb_seqstate.setMaximumWidth(self.width * 0.01)
-        self.lb_seqstate.setStyleSheet('background-color: rgb(0, 237, 0);')
-        # self.lb_zmqtitle.setMaximumHeight(self.height * 0.015)
-        # self.lb_zmqtitle.setMaximumHeight(self.height * 0.015)
-        # self.lb_seqtitle.setMaximumHeight(self.height * 0.015)
-        # self.lb_seqtitle.setMaximumWidth(self.width * 0.5)
-
 
         self.te_log.setMaximumHeight(self.height * 0.1)
-        self.testlist.setMaximumHeight(self.height * 0.6)
-        self.testlist2.setMaximumHeight(self.height * 0.6)
+        self.testlist.setMaximumHeight(self.height * 0.8)
+        self.testlist2.setMaximumHeight(self.height * 0.8)
         self.group1.setMaximumWidth(self.width * 0.1)
         self.group2.setMaximumWidth(self.width * 0.1)
         self.btn_group.setMaximumWidth(self.width * 0.1)
         self.group1.setMaximumHeight(self.height * 0.25)
         self.group2.setMaximumHeight(self.height * 0.25)
         self.btn_group.setMaximumHeight(self.height * 0.1)
-        # self.cb_zero.setChecked(False)
 
         # 初始化工具栏
         icon1 = QtGui.QIcon()
@@ -207,7 +218,17 @@ class TestSeq(Ui_MainWindow,QMainWindow):
         self.myeditbar.textEdited.connect(self.edit_looptime)
         self.mystepbar.clicked.connect(self.step_test)
 
-        if(log.stationnum == '2'):
+        # 初始化视觉界面
+        self.pb_loadimg.setMaximumWidth(self.width * 0.1)
+        self.pb_snap.setMaximumWidth(self.width * 0.1)
+        self.pb_live.setMaximumWidth(self.width * 0.1)
+        self.pb_opencamera.setMaximumWidth(self.width * 0.1)
+        self.cb_camera.setMaximumWidth(self.width * 0.1)
+        self.sb_extime.setMaximumWidth(self.width * 0.1)
+        self.pb_snap.setDisabled(True)
+        self.pb_live.setDisabled(True)
+
+        if(load.stationnum == '2'):
             self.group2.setVisible(True)
             self.pbar2.setVisible(True)
             self.testlist2.setVisible(True)
@@ -235,6 +256,9 @@ class TestSeq(Ui_MainWindow,QMainWindow):
         log.loginfo.process_log('Initialize sequence tree')
         tree.setColumnCount(4)
         tree.setHeaderLabels(['TestItems', 'Test Time', 'TestData', 'TestResult'])
+
+        tree.header().setStyleSheet("Background-color:rgb(2, 134, 239);border-radius:14px;")
+
         tree.header().setSectionResizeMode(QHeaderView.Stretch)
         tree.header().setSectionResizeMode(0, QHeaderView.ResizeToContents)
 
@@ -271,7 +295,7 @@ class TestSeq(Ui_MainWindow,QMainWindow):
         self.load1.load_seq()
         self.testlist.clear()
         self.root1 = self.initialize_tree(self.testlist, self.load1.seq_col1, self.load1.seq_col7)
-        if (log.stationnum == '2'):
+        if (load.stationnum == '2'):
             self.load2.load_seq()
             self.testlist2.clear()
             self.root2 = self.initialize_tree(self.testlist2, self.load2.seq_col1, self.load2.seq_col7)
@@ -279,6 +303,7 @@ class TestSeq(Ui_MainWindow,QMainWindow):
     def reload_scripts(self):
         log.loginfo.process_log('Reload scripts')
         testthread.reload_scripts()
+        motionthread.reload_scripts()
 
     # 循环测试时刷新UI
     def loop_refresh(self, times):
@@ -288,13 +313,13 @@ class TestSeq(Ui_MainWindow,QMainWindow):
                 self.lb_state.setText('Testing...')
                 pe.setColor(QPalette.Window, QColor(255, 255, 0))  # 设置背景颜色
                 self.lb_state.setPalette(pe)  # 设置label背景色
-            if (log.stationnum == '2'):
+            if (load.stationnum == '2'):
                 self.myeditbar.setText(str(self.bwThread1.looptime) + '  ' + str(self.bwThread2.looptime))
             else:
                 self.myeditbar.setText(str(self.bwThread1.looptime))
 
             # 单工位时不运行
-        if (log.stationnum == '2'):
+        if (load.stationnum == '2'):
             if (self.bwThread2.seq_end):
                 if(self.bwThread2.looptime != 0):                 # 确保最后一次只更新循环次数
                     self.clear_seq(self.root2, self.pbar2)
@@ -318,7 +343,7 @@ class TestSeq(Ui_MainWindow,QMainWindow):
             pe.setColor(QPalette.Window, QColor(255, 255, 0))  # 设置背景颜色
             self.lb_state.setPalette(pe)  # 设置label背景色
         # 单工位时不运行
-        if (log.stationnum == '2'):
+        if (load.stationnum == '2'):
             if (self.bwThread2.seq_end):
                 self.clear_seq(self.root2, self.pbar2)
                 self.bwThread2.start()
@@ -427,11 +452,14 @@ class TestSeq(Ui_MainWindow,QMainWindow):
 
     # 测试过程中刷新UI，线程1
     def refresh_ui(self,ls):
+        # 有子项时显示子项
         if(len(ls[2]) != 1):
             for i in range(len(ls[2])):
                 self.root1[ls[0]].child(i).setText(2, str(ls[2][i]))
                 self.root1[ls[0]].child(i).setText(3, ls[3][i])
-
+        # 将结果列表的括号去掉后再显示
+        ls[2] = str(ls[2])[1:len(str(ls[2])) - 1]
+        # 显示其他信息
         for i in range(1, 4):
             if (i != 3):
                 self.root1[ls[0]].setText(i, str(ls[i]))
@@ -465,6 +493,8 @@ class TestSeq(Ui_MainWindow,QMainWindow):
             for i in range(len(ls[2])):
                 self.root2[ls[0]].child(i).setText(2, str(ls[2][i]))
                 self.root2[ls[0]].child(i).setText(3, ls[3][i])
+
+        ls[2] = str(ls[2])[1:len(str(ls[2])) - 1]
 
         for i in range(1, 4):
             if (i != 3):
@@ -638,12 +668,15 @@ class TestSeq(Ui_MainWindow,QMainWindow):
 
     # 切换到手动控制界面
     def motion_debug_tool(self):
-        self.motion.read_motion_config()
-        self.initialize_io_table()
+        self.motion.read_io_config()
+        self.motion.read_axis_config()
+        motionthread.auto.choose_axis(self.cb_axis.currentText())
+        self.motion.initialize_motion()
+        self.initialize_motion_ui()
         self.tabWidget.setCurrentIndex(2)
 
     # 初始化IO表，从配置文件中读取信息
-    def initialize_io_table(self):
+    def initialize_motion_ui(self):
         self.tw_io.setColumnCount(2)
         self.tw_io.setRowCount(len(self.motion.io_name) + 10)
         self.tw_io.setHorizontalHeaderLabels(['IO', 'Description'])
@@ -658,7 +691,6 @@ class TestSeq(Ui_MainWindow,QMainWindow):
         self.pb_relative.setMaximumWidth(self.width * 0.1)
         self.pb_stop.setMaximumWidth(self.width * 0.1)
         self.pb_reset.setMaximumWidth(self.width * 0.1)
-
         i = 0
         for seq in self.motion.io_name:
             if(i != 0):
@@ -669,6 +701,11 @@ class TestSeq(Ui_MainWindow,QMainWindow):
                 self.tw_io.setItem(i - 1, 1, newItem)
             i = i+1
         self.tw_io.horizontalHeader().setStretchLastSection(True)
+        j = 0
+        for seq in self.motion.axis_name:
+            if(j != 0):
+                self.cb_axis.addItem(seq)
+            j = j+1
 
     # 刷新运动控制参数（IO）
     def refresh_motion_para(self,ls):
@@ -685,16 +722,90 @@ class TestSeq(Ui_MainWindow,QMainWindow):
     def recv_server(self, ls):
         if(ls[0] == 'Start'):
             self.test_start()
-        if (ls[0] == 'ServerStart'):
-            self.lb_zmqstate.setStyleSheet('background-color: rgb(0, 237, 0);')
 
     def refresh_log(self, msg):
         self.te_log.append(msg)
+
+    # 运动相关函数
+    def change_axis(self):
+        motionthread.auto.choose_axis(self.cb_axis.currentText())
+
+    def absolute_run(self, value):
+        value = int(self.dsb_step.value()*1000)
+        motionthread.auto.absolute_run(value)
+
+    def relative_run(self):
+        value = int(self.dsb_step.value() * 1000)
+        motionthread.auto.relative_run(value)
+        return True
+
+    def jog_backward(self):
+        motionthread.auto.jog_backward()
+
+    def jog_forward(self):
+        motionthread.auto.jog_forward()
+
+    def axis_reset(self):
+        motionthread.auto.go_home()
+
+    def axis_stop(self):
+        motionthread.auto.stop()
+
+    def switch_to_visionwindow(self):
+        self.tabWidget.setCurrentIndex(3)
+        winxy = self.mapToGlobal(QPoint(0, 0))
+        # 图像显示窗口坐标减去主窗口坐标
+        imagexy = self.lb_image.mapToGlobal(-winxy)
+        #self.vision.init_win(int(self.winId()),imagexy.y(),imagexy.x(),self.lb_image.width(),self.lb_image.height())
+        self.vision.init_win(0,imagexy.y(),imagexy.x(),self.lb_image.width(),self.lb_image.height())
+
+        cams = self.vision.find_cameras(b'GigEVision')
+
+        for cam in cams:
+            self.cb_camera.addItem(cam)
+
+    def load_image(self):
+        qimg = self.vision.load_image()
+        # 根据控件大小调整图片大小
+        qimg = qimg.scaled(self.lb_image.height(), self.lb_image.width())
+        self.lb_image.setPixmap(QPixmap(qimg))
+
+    def open_camera(self):
+        if(self.pb_opencamera.text() == 'Open'):
+            if(self.vision.open_camera(self.cb_camera.currentIndex())):
+                self.pb_opencamera.setText('Close')
+                self.pb_live.setDisabled(False)
+                self.pb_snap.setDisabled(False)
+        else:
+            self.vision.close_camera()
+            self.pb_opencamera.setText('Open')
+            self.pb_live.setDisabled(True)
+            self.pb_snap.setDisabled(True)
+
+    def snap(self):
+        self.vision.snap()
+        # self.vision.snap(0)
+        # qimg = qimg.scaled(self.lb_image.width(), self.lb_image.height())
+        # self.lb_image.setPixmap(QPixmap(qimg))
+
+    def live(self):
+        self.vision.stoplive = False
+        if(self.pb_live.text() == 'Live'):
+            self.vision.start_live()
+            self.pb_live.setText('Stop')
+        else:
+            self.vision.stoplive = True
+            self.pb_live.setText('Live')
+
+    def refresh_image(self, img):
+        qimg = img.scaled(self.lb_image.width(), self.lb_image.height())
+        self.lb_image.setPixmap(QPixmap(qimg))
 
 if __name__ == '__main__':
     '''
     主函数
     '''
+    #QApplication.setStyle(QStyleFactory.create("Fusion"))
     scriptpath = systempath.bundle_dir+'/Scripts/testscript.py'
     app = QApplication(sys.argv)
     if(not os.path.exists(scriptpath)):
