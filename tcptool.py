@@ -13,6 +13,7 @@ from tcpwindow import *
 import socket
 import threading
 import time
+import log
 
 socket.setdefaulttimeout(0.5)
 class TcpTool(Ui_tcptool, QDialog):
@@ -20,6 +21,7 @@ class TcpTool(Ui_tcptool, QDialog):
         super(TcpTool, self).__init__(parent)
         self.setupUi(self)
         self.pb_tcpconnect.clicked.connect(self.tcp_connect)
+        self.setWindowTitle('Tcp Debug')
         self.pb_send.clicked.connect(self.tcp_send)
         self.le_ip.setText('192.168.52.52:5000')
         self.ip = ''
@@ -35,6 +37,7 @@ class TcpTool(Ui_tcptool, QDialog):
                 self.port = int(s_list[1])
                 con_ok = self.skt.connect((self.ip, self.port))
                 if(con_ok == None):
+                    log.loginfo.process_log('tcp connect ok')
                     self.pb_tcpconnect.setText('Close')
                     self.recving = True
                     self.recv_thread = threading.Thread(target=self.tcp_recv)
@@ -42,7 +45,7 @@ class TcpTool(Ui_tcptool, QDialog):
                     self.recv_thread.start()
                     self.pb_send.setEnabled(True)
             except Exception as e:
-                print(e)
+                log.loginfo.process_log(str(e))
                 self.pb_send.setEnabled(False)
         else:
             self.recving = False
@@ -51,9 +54,11 @@ class TcpTool(Ui_tcptool, QDialog):
             self.pb_send.setEnabled(False)
 
     def tcp_send(self):
-        sendmsg = self.te_sendmsg.toPlainText()
-        self.skt.send(sendmsg.encode())
-        # self.tcp_recv()
+        try:
+            sendmsg = self.te_sendmsg.toPlainText()
+            self.skt.send(sendmsg.encode())
+        except Exception as e:
+            log.loginfo.process_log(str(e))
 
     def display_recv(self, msg):
         self.te_recvmsg.append(msg)
@@ -64,7 +69,7 @@ class TcpTool(Ui_tcptool, QDialog):
                 recvmsg = self.skt.recv(1024)
                 self.te_recvmsg.append(recvmsg.decode())
             except Exception as e:
-                print(e)
+                log.loginfo.process_log(str(e))
             time.sleep(0.01)
 
     def closeEvent(self, event):
@@ -73,5 +78,6 @@ class TcpTool(Ui_tcptool, QDialog):
             self.pb_tcpconnect.setText('Connect')
             self.pb_send.setEnabled(False)
             self.skt.close()
+            log.loginfo.process_log('tcp close ok')
         except Exception as e:
-            print(e)
+            log.loginfo.process_log(str(e))

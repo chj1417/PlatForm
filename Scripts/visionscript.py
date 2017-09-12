@@ -21,16 +21,14 @@ import ctypes
 class Vision():
     def __init__(self):
         self.cap = None
-        self.dll = CDLL(systempath.bundle_dir + '/Refrence/libPythonSo.dylib')
+        #self.dll = CDLL(systempath.bundle_dir + '/Refrence/libPythonSo.dylib')
 
     def init_window(self,id,row1,col1,row2,col2):
-        print(self.dll.sum(1,2))
-        self.dll.initialize_window(id, row1, col1, row2, col2)
-        print('ok')
+
+        self.dll.initialize_window(c_int(id), row1, col1, row2, col2)
 
     def load_image(self):
         img = cv.imread('test.bmp', cv.IMREAD_GRAYSCALE)  # IMREAD_GRAYSCALE   IMREAD_COLOR
-        print(img.shape)
         qimg = self.convert_to_qimage(img)
         return qimg
 

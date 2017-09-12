@@ -14,11 +14,13 @@ import serial.tools.list_ports
 from serialwindow import *
 import threading
 import time
+import log
 
 class SerialTool(Ui_serialtool, QDialog):
     def __init__(self, parent = None):
         super(SerialTool, self).__init__(parent)
         self.setupUi(self)
+        self.setWindowTitle('Serial Debug')
         self.pb_serialcon.clicked.connect(self.serial_connect)
         self.pb_serialsend.clicked.connect(self.serial_send)
         self.com = serial.Serial()
@@ -57,7 +59,7 @@ class SerialTool(Ui_serialtool, QDialog):
                     self.pb_serialsend.setEnabled(True)
                     self.pb_serialcon.setText('Close')
             except Exception as e:
-                print(e)
+                log.loginfo.process_log(e)
                 self.pb_serialsend.setEnabled(False)
         else:
             self.recving = False
@@ -74,7 +76,7 @@ class SerialTool(Ui_serialtool, QDialog):
             self.com.write_timeout = 0.5
             self.com.write(self.te_serialsendmsg.toPlainText().encode())
         except Exception as e:
-            print(e)
+            log.loginfo.process_log(str(e))
 
     def serial_recv(self):
         while self.recving:
@@ -84,7 +86,7 @@ class SerialTool(Ui_serialtool, QDialog):
                 if(len(ret)!=0):
                     self.te_serialrecvmsg.append(ret.decode())
             except Exception as e:
-                print(e)
+                log.loginfo.process_log(str(e))
 
     def closeEvent(self, event):
         try:
@@ -93,5 +95,5 @@ class SerialTool(Ui_serialtool, QDialog):
             self.pb_serialsend.setEnabled(False)
             self.com.close()
         except Exception as e:
-            print(e)
+            log.loginfo.process_log(str(e))
 

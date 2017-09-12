@@ -27,7 +27,6 @@ class VisionThread(QtCore.QThread):
         visions = visionscript.Vision()
 
     def init_win(self,id,row1, col1, row2, col2):
-        print('aaaa')
         visions.init_window(id,row1, col1, row2, col2)
 
     def load_image(self):
@@ -35,7 +34,6 @@ class VisionThread(QtCore.QThread):
         return qimg
 
     def find_cameras(self, type):
-        # return visions.find_cameras(b'DirectShow')
         return visions.find_cameras(type)
 
     def open_camera(self, num):
