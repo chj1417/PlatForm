@@ -8,10 +8,7 @@ Update date：2017.7.20
 version 1.0.0
 """
 
-import cv2 as cv
-import numpy as np
-from PyQt5.QtWidgets import *
-from PyQt5.QtGui import *
+from PyQt5.QtGui import QImage
 import threading
 from PyQt5 import QtCore
 import visionscript
@@ -27,7 +24,6 @@ class VisionThread(QtCore.QThread):
         visions = visionscript.Vision()
 
     def init_win(self,id,row1, col1, row2, col2):
-        print('aaaa')
         visions.init_window(id,row1, col1, row2, col2)
 
     def load_image(self):
@@ -35,7 +31,6 @@ class VisionThread(QtCore.QThread):
         return qimg
 
     def find_cameras(self, type):
-        # return visions.find_cameras(b'DirectShow')
         return visions.find_cameras(type)
 
     def open_camera(self, num):

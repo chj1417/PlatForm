@@ -16,6 +16,7 @@ class ZmqTool(Ui_zmqtool, QDialog):
     def __init__(self, parent=None):
         super(ZmqTool, self).__init__(parent)
         self.setupUi(self)
+        self.setWindowTitle('Zmq Debug')
 
     def display_recv_msg(self, msg):
         st = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time.time()))

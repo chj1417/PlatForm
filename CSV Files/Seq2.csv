@@ -1,5 +1,5 @@
 TestItem,Function,Mode,Low Limit,Up Limit,Next Step,Level
-MTCP:TSCR,function1,test,nan,nan,continue,root
+MTCP:TSCR111,function1,test,nan,nan,continue,root
 MTCP:TSCR:Child1,function1,test,-1,1,continue,child
 MTCP:TSCR:Child2,function1,test,-1,1,continue,child
 MTCP:INIT,function2,skip,-1,1,continue,root

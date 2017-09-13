@@ -13,6 +13,7 @@ import zmq
 from PyQt5 import QtCore
 import log
 import inihelper
+import systempath
 
 # zmq线程类
 class ZmqComm(QtCore.QThread):
@@ -24,9 +25,10 @@ class ZmqComm(QtCore.QThread):
         self.message = ''
 
     def zmq_server(self):
-        self.port = inihelper.read_ini('Config', 'ZMQPort')
+        self.port = inihelper.read_ini(systempath.bundle_dir + '/Config/Config.ini', 'Config', 'ZMQPort')
         context = zmq.Context()
         socket = context.socket(zmq.REP)
+        
         socket.bind('tcp://*:%s'%self.port)
         log.loginfo.process_log('ZMQ Server Start, Port: ' + self.port)
         self.zmqrecvsingnal.emit(['ServerStart'])
