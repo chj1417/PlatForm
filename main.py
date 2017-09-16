@@ -15,27 +15,62 @@ import csv
 import load
 import log
 import os
+import platform
 import inihelper
-from PyQt5.QtGui import *
-from PyQt5.QtCore import *
-from PyQt5.QtWidgets import *
-from PyQt5.QtWidgets import QMainWindow, QDesktopWidget, QAction
 from mainwindow import *
 from tcptool import *
 from zmqtool import *
 from serialtool import *
+from usermanage import *
 import motionthread
 import testthread
 import zmqserver
 import visionthread
+from ctypes import *
+from uiprocess import *
 
-class TestSeq(Ui_MainWindow,QMainWindow):
+
+class TestSeq(UIProcess, QMainWindow):
     def __init__(self, parent=None):
         super(TestSeq, self).__init__(parent)
-        self.screen = QDesktopWidget().screenGeometry()
-        self.width = self.screen.width()
-        self.height = self.screen.height()
-        print(self.winId())
+        # 按钮槽函数连接
+        self.pb_stop.clicked.connect(self.test_break)
+        self.pb_start.clicked.connect(self.test_start)
+        self.pb_saveseq.clicked.connect(self.save_sequence)
+        self.pb_delrow.clicked.connect(self.delete_row)
+        self.pb_insertrow.clicked.connect(self.insert_row)
+        self.actionReload_CSV.triggered.connect(self.load_sequence)
+        self.cb_seq.currentIndexChanged.connect(self.edit_sequence)
+        # 菜单项槽函数连接       ﻿
+        self.actionReload_Scripts.triggered.connect(self.reload_scripts)
+        self.actionLogin.triggered.connect(self.change_user)
+        self.actionUser_Manage.triggered.connect(self.user_management)
+        self.actionMain_Window.triggered.connect(self.switch_to_mainwindow)
+        self.actionEdit_Window.triggered.connect(self.edit_sequence)
+        self.actionMotion_Window.triggered.connect(self.motion_debug)
+        self.actionZmq_Debug.triggered.connect(self.zmq_debug_tool)
+        self.actionTcp_Debug.triggered.connect(self.tcp_debug_tool)
+        self.actionSerial_Debug.triggered.connect(self.serial_debug_tool)
+        self.actionToolBar.triggered.connect(self.view_toolbar)
+        self.actionVision_Window.triggered.connect(self.switch_to_visionwindow)
+        self.actionOpen_CSV.triggered.connect(self.open_sequence)
+        self.actionOpen_Result.triggered.connect(self.open_result)
+        self.actionOpen_Log.triggered.connect(self.open_log)
+        self.actionClose_System.triggered.connect(self.close)
+        # 工具栏信号连接
+        self.actionStart.triggered.connect(self.test_start)
+        self.actionStop.triggered.connect(self.test_break)
+        self.actionPause.triggered.connect(self.test_pause)
+        self.actionContinue.triggered.connect(self.continue_tool)
+        self.actionLoginTool.triggered.connect(self.change_user)
+        self.actionEdit.triggered.connect(self.edit_sequence)
+        self.actionAutomation.triggered.connect(self.motion_debug)
+        self.actionMainwindow.triggered.connect(self.switch_to_mainwindow)
+        self.actionRefresh.triggered.connect(self.reload_scripts)
+        self.actionClear.triggered.connect(self.te_log.clear)
+        self.myloopbar.clicked.connect(self.enable_loop)
+        self.myeditbar.textEdited.connect(self.edit_looptime)
+        self.mystepbar.clicked.connect(self.step_test)
         # 两个树形控件的root items
         self.root1 = []
         self.root2 = []
@@ -43,36 +78,6 @@ class TestSeq(Ui_MainWindow,QMainWindow):
         self.load2 = load.Load('Seq2.csv')
         self.bwThread1 = testthread.TestThread(self.load1, 1)
         self.bwThread2 = testthread.TestThread(self.load2, 2)
-        self.setupUi(self)
-
-        self.btn_stop.clicked.connect(self.test_break)
-        self.btn_start.clicked.connect(self.test_start)
-        self.btn_saveseq.clicked.connect(self.save_sequence)
-        self.actionReload_CSV.triggered.connect(self.load_sequence)
-        self.actionEdit_Sequence.triggered.connect(self.edit_sequence)
-        self.cb_seq.currentIndexChanged.connect(self.edit_sequence)
-
-        # 菜单项槽函数连接       ﻿
-        self.actionReload_Scripts.triggered.connect(self.reload_scripts)
-
-        self.actionLogin.triggered.connect(self.change_user)
-        self.actionMain_Window.triggered.connect(self.switch_to_mainwindow)
-        self.actionEdit_Window.triggered.connect(self.switch_to_editwindow)
-        self.actionMotion_Debug.triggered.connect(self.motion_debug_tool)
-        self.actionZmq_Debug.triggered.connect(self.zmq_debug_tool)
-        self.actionTcp_Debug.triggered.connect(self.tcp_debug_tool)
-        self.actionSerial_Debug.triggered.connect(self.serial_debug_tool)
-        self.actionToolBar.triggered.connect(self.view_toolbar)
-        self.actionVision_Window.triggered.connect(self.switch_to_visionwindow)
-
-        log.loginfo = log.Log()
-        log.loginfo.refreshlog.connect(self.refresh_log)
-        self.load1.load_seq()
-        self.load2.load_seq()
-        log.loginfo.process_log('Load sequence')
-        self.initialize_ui()
-        self.initialize_seq()
-
         # 连接子进程的信号和槽函数
         self.bwThread1.finishSignal.connect(self.test_end)
         self.bwThread1.refresh.connect(self.refresh_ui)
@@ -80,24 +85,35 @@ class TestSeq(Ui_MainWindow,QMainWindow):
         self.bwThread2.refresh.connect(self.refresh_ui2)
         self.bwThread1.refreshloop.connect(self.loop_refresh)
         self.bwThread2.refreshloop.connect(self.loop_refresh)
+        # 实例化log类
+        log.loginfo = log.Log()
+        log.loginfo.refreshlog.connect(self.refresh_log)
+        # 加载sequence
+        self.load1.load_seq()
+        self.load2.load_seq()
+        log.loginfo.process_log('Load sequence')
+        self.initialize_sequence()
+        # 初始化用户名
+        self.le_main_user.setText(UserManager.username)
+        # 开启zmq server
         self.zmq = zmqserver.ZmqComm()
         self.zmq.zmqrecvsingnal.connect(self.recv_server)
-        # 开启zmq server
         self.zmq.start()
-
         # 实例化登陆类
         global user
         user.loginsignal.connect(self.refresh_user)
-        # 实例化tcp，zmq调试工具类
+        # 实例化tcp，串口，zmq调试工具类
         self.tcptool = TcpTool()
+        self.serialtool = SerialTool()
         self.zmqtool = ZmqTool()
+        self.usertool = UserManage()
         # 连接zmq发送接收信号，显示信息到调试工具界面
         self.zmq.zmqrecvsingnal.connect(self.zmqtool.display_recv_msg)
         self.zmq.zmqsendsingnal.connect(self.zmqtool.display_send_msg)
-
         # 实例化手动控制类
         self.motion = motionthread.Motion()
         self.motion.iosingnal.connect(self.refresh_motion_para)
+        # 连接运动控制相关函数
         self.pb_jog1.pressed.connect(self.jog_forward)
         self.pb_jog1.released.connect(self.axis_stop)
         self.pb_jog2.pressed.connect(self.jog_backward)
@@ -107,8 +123,9 @@ class TestSeq(Ui_MainWindow,QMainWindow):
         self.pb_relative.clicked.connect(self.relative_run)
         self.cb_axis.currentIndexChanged.connect(self.change_axis)
         self.pb_reset.clicked.connect(self.axis_reset)
-        self.serialtool = SerialTool()
-
+        # 初始化运动控制界面
+        self.motion.initialize_motion()
+        self.initialize_motion_ui()
         # 视觉界面槽函数连接
         self.vision = visionthread.VisionThread()
         self.pb_loadimg.clicked.connect(self.load_image)
@@ -116,119 +133,12 @@ class TestSeq(Ui_MainWindow,QMainWindow):
         self.pb_snap.clicked.connect(self.snap)
         self.pb_live.clicked.connect(self.live)
         self.vision.imgsignal.connect(self.refresh_image)
-        #self.vision.init_win(self.lb_image.)
 
-    # 初始化UI
-    def initialize_ui(self):
-        log.loginfo.process_log('Initialize UI')
-        self.lb_title.setText(inihelper.read_ini('Config', 'Title'))
-        self.lb_ver.setText(inihelper.read_ini('Config', 'Version'))
-        self.tabWidget.tabBar().hide()
-        self.tabWidget.setCurrentIndex(0)
-
-        # 初始化统计信息显示区
-        self.le_time.setText('0')
-        self.le_pass.setText('0')
-        self.le_total.setText('0')
-        self.le_yield.setText('0')
-        global pe, pe2
-        pe = QPalette()
-        self.lb_state.setAutoFillBackground(True)  # 设置背景充满，为设置背景颜色的必要条件
-        self.lb_state2.setAutoFillBackground(True)
-        self.lb_state.setText('Pass')
-        pe.setColor(QPalette.Window, QColor(0, 255, 0))  # 设置背景颜色
-        self.lb_state.setPalette(pe)  # 设置label背景色
-
-        # 初始化用户名
-        self.le_main_user.setText(UserManager.username)
-
-        # 初始化各控件大小
-        self.setMinimumHeight(self.height * 0.5)
-        self.setMinimumWidth(self.width * 0.5)
-        self.lb_title.setFixedHeight(self.height * 0.08)
-        self.le_main_user.setMaximumWidth(self.width * 0.1)
-
-        self.lb_ver.setMaximumHeight(self.height * 0.015)
-        self.lb_ver.setMaximumWidth(self.width * 0.06)
-
-        self.te_log.setMaximumHeight(self.height * 0.1)
-        self.testlist.setMaximumHeight(self.height * 0.8)
-        self.testlist2.setMaximumHeight(self.height * 0.8)
-        self.group1.setMaximumWidth(self.width * 0.1)
-        self.group2.setMaximumWidth(self.width * 0.1)
-        self.btn_group.setMaximumWidth(self.width * 0.1)
-        self.group1.setMaximumHeight(self.height * 0.25)
-        self.group2.setMaximumHeight(self.height * 0.25)
-        self.btn_group.setMaximumHeight(self.height * 0.1)
-
-        # 初始化工具栏
-        icon1 = QtGui.QIcon()
-        icon1.addPixmap(QtGui.QPixmap(systempath.bundle_dir + "/Resource/start.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
-        icon2 = QtGui.QIcon()
-        icon2.addPixmap(QtGui.QPixmap(systempath.bundle_dir + "/Resource/stop.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
-        icon3 = QtGui.QIcon()
-        icon3.addPixmap(QtGui.QPixmap(systempath.bundle_dir + "/Resource/home.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
-        icon4 = QtGui.QIcon()
-        icon4.addPixmap(QtGui.QPixmap(systempath.bundle_dir + "/Resource/refresh.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
-        self.actionStart.setIcon(icon1)
-        self.actionStop.setIcon(icon2)
-        self.actionMainwindow.setIcon(icon3)
-        self.actionRefresh.setIcon(icon4)
-        self.actionStart.triggered.connect(self.test_start)
-        self.actionStop.triggered.connect(self.test_break)
-        self.actionPause.triggered.connect(self.test_pause)
-        self.actionContinue.triggered.connect(self.continue_tool)
-        self.actionLoginTool.triggered.connect(self.change_user)
-        self.actionEdit.triggered.connect(self.edit_sequence)
-        self.actionAutomation.triggered.connect(self.motion_debug_tool)
-        self.actionMainwindow.triggered.connect(self.switch_to_mainwindow)
-        self.actionRefresh.triggered.connect(self.reload_scripts)
-
-        font = QtGui.QFont()
-        font.setPointSize(10)
-        self.mystepbar = QCheckBox()
-        self.mystepbar.setText('StepTest')
-        self.mystepbar.setToolTip('Enable step test')
-        self.mystepbar.setFont(font)
-        self.toolBar.addWidget(self.mystepbar)
-        self.nextAction = QAction('Next', self)
-        self.toolBar.addAction(self.nextAction)
-        self.nextAction.triggered.connect(self.next_step)
-        self.nextAction.setToolTip('Next step')
-        self.nextAction.setDisabled(True)
-        self.toolBar.addSeparator()
-
-        self.myloopbar = QCheckBox()
-        self.myloopbar.setText('LoopTest')
-        self.myloopbar.setToolTip('Enable loop test')
-        self.toolBar.addWidget(self.myloopbar)
-        self.myeditbar = QLineEdit()
-        self.myeditbar.setText('0')
-        self.myeditbar.setToolTip('Loop test times')
-        self.myloopbar.setFont(font)
-        self.myeditbar.setMaximumWidth(self.width * 0.03)
-        self.myeditbar.setStyleSheet('background-color: rgb(237, 237, 237);')
-        self.myeditbar.setFont(font)
-        self.toolBar.addWidget(self.myeditbar)
-        self.toolBar.addSeparator()
-        self.actionContinue.setDisabled(True)
-
-        # 连接工具栏事件槽函数
-        self.myloopbar.clicked.connect(self.enable_loop)
-        self.myeditbar.textEdited.connect(self.edit_looptime)
-        self.mystepbar.clicked.connect(self.step_test)
-
-        # 初始化视觉界面
-        self.pb_loadimg.setMaximumWidth(self.width * 0.1)
-        self.pb_snap.setMaximumWidth(self.width * 0.1)
-        self.pb_live.setMaximumWidth(self.width * 0.1)
-        self.pb_opencamera.setMaximumWidth(self.width * 0.1)
-        self.cb_camera.setMaximumWidth(self.width * 0.1)
-        self.sb_extime.setMaximumWidth(self.width * 0.1)
-        self.pb_snap.setDisabled(True)
-        self.pb_live.setDisabled(True)
-
+    # 初始化测试序列
+    def initialize_sequence(self):
         if(load.stationnum == '2'):
+            self.testlist.setColumnWidth(0, self.width*0.25)
+            self.testlist2.setColumnWidth(0, self.width * 0.25)
             self.group2.setVisible(True)
             self.pbar2.setVisible(True)
             self.testlist2.setVisible(True)
@@ -236,15 +146,15 @@ class TestSeq(Ui_MainWindow,QMainWindow):
             self.le_pass2.setText('0')
             self.le_total2.setText('0')
             self.le_yield2.setText('0')
-            pe2 = QPalette()
             self.lb_state2.setText('Pass')
-            pe2.setColor(QPalette.Window, QColor(0, 255, 0))  # 设置背景颜色
-            self.lb_state2.setPalette(pe2)  # 设置label背景色
+            self.pe2.setColor(QPalette.Window, QColor(0, 255, 0))  # 设置背景颜色
+            self.lb_state2.setPalette(self.pe2)  # 设置label背景色
             self.root1 = self.initialize_tree(self.testlist, self.load1.seq_col1, self.load1.seq_col7)
             self.root2 = self.initialize_tree(self.testlist2, self.load2.seq_col1, self.load2.seq_col7)
             self.pbar.setRange(0, len(self.root1) - 1)
             self.pbar2.setRange(0, len(self.root2) - 1)
         else:
+            self.testlist.setColumnWidth(0, self.width * 0.5)
             self.group2.setVisible(False)
             self.pbar2.setVisible(False)
             self.testlist2.setVisible(False)
@@ -256,14 +166,10 @@ class TestSeq(Ui_MainWindow,QMainWindow):
         log.loginfo.process_log('Initialize sequence tree')
         tree.setColumnCount(4)
         tree.setHeaderLabels(['TestItems', 'Test Time', 'TestData', 'TestResult'])
-
-        tree.header().setStyleSheet("Background-color:rgb(2, 134, 239);border-radius:14px;")
-
-        tree.header().setSectionResizeMode(QHeaderView.Stretch)
-        tree.header().setSectionResizeMode(0, QHeaderView.ResizeToContents)
-
+        tree.header().setStyleSheet("Background-color:rgb(88, 160, 200);border-radius:14px;")
         # 设置行高为25
         tree.setStyleSheet("QTreeWidget::item{height:%dpx}"%int(self.height*0.03))
+        tree.header().setStretchLastSection(True)
         j = 0
         root = []
         for seq in items[1:len(items)]:
@@ -277,17 +183,6 @@ class TestSeq(Ui_MainWindow,QMainWindow):
                 child.setText(0, seq)
             j = j + 1
         return root
-
-    # 初始化编辑测试序列的表格
-    def initialize_seq(self):
-        log.loginfo.process_log('Initialize edit sequence')
-        self.tableseq.setRowCount(50)
-        self.tableseq.setColumnCount(7)
-        self.tableseq.setColumnWidth(0, self.width*0.4)
-        self.tableseq.setColumnWidth(1, self.width*0.2)
-        self.tableseq.horizontalHeader().setStretchLastSection(True)
-        self.btn_saveseq.setMaximumWidth(self.width*0.1)
-        self.cb_seq.setMaximumWidth(self.width*0.1)
 
     # 重新加载Sequence
     def load_sequence(self):
@@ -311,21 +206,21 @@ class TestSeq(Ui_MainWindow,QMainWindow):
             if(self.bwThread1.looptime != 0):                     # 确保最后一次只更新循环次数
                 self.clear_seq(self.root1, self.pbar)
                 self.lb_state.setText('Testing...')
-                pe.setColor(QPalette.Window, QColor(255, 255, 0))  # 设置背景颜色
-                self.lb_state.setPalette(pe)  # 设置label背景色
+                self.pe.setColor(QPalette.Window, QColor(255, 255, 0))  # 设置背景颜色
+                self.lb_state.setPalette(self.pe)  # 设置label背景色
             if (load.stationnum == '2'):
                 self.myeditbar.setText(str(self.bwThread1.looptime) + '  ' + str(self.bwThread2.looptime))
             else:
                 self.myeditbar.setText(str(self.bwThread1.looptime))
 
-            # 单工位时不运行
+        # 单工位时不运行
         if (load.stationnum == '2'):
             if (self.bwThread2.seq_end):
                 if(self.bwThread2.looptime != 0):                 # 确保最后一次只更新循环次数
                     self.clear_seq(self.root2, self.pbar2)
                     self.lb_state2.setText('Testing...')
-                    pe2.setColor(QPalette.Window, QColor(255, 255, 0))  # 设置背景颜色
-                    self.lb_state2.setPalette(pe2)  # 设置label背景色
+                    self.pe2.setColor(QPalette.Window, QColor(255, 255, 0))  # 设置背景颜色
+                    self.lb_state2.setPalette(self.pe2)  # 设置label背景色
                 self.myeditbar.setText(str(self.bwThread1.looptime) + '  ' + str(self.bwThread2.looptime))
 
     # 开始测试
@@ -333,58 +228,58 @@ class TestSeq(Ui_MainWindow,QMainWindow):
         log.loginfo.process_log('Start test')
         self.bwThread1.stop = False
         self.bwThread2.stop = False
-        self.btn_start.setDisabled(True)
+        self.pb_start.setDisabled(True)
         self.actionStart.setDisabled(True)
         # 开始执行 run() 函数里的内容,只有测试结束了的线程才能开始
         if(self.bwThread1.seq_end):
             self.clear_seq(self.root1,self.pbar)
             self.bwThread1.start()
             self.lb_state.setText('Testing...')
-            pe.setColor(QPalette.Window, QColor(255, 255, 0))  # 设置背景颜色
-            self.lb_state.setPalette(pe)  # 设置label背景色
+            self.pe.setColor(QPalette.Window, QColor(255, 255, 0))  # 设置背景颜色
+            self.lb_state.setPalette(self.pe)  # 设置label背景色
         # 单工位时不运行
         if (load.stationnum == '2'):
             if (self.bwThread2.seq_end):
                 self.clear_seq(self.root2, self.pbar2)
                 self.bwThread2.start()
                 self.lb_state2.setText('Testing...')
-                pe2.setColor(QPalette.Window, QColor(255, 255, 0))  # 设置背景颜色
-                self.lb_state2.setPalette(pe2)  # 设置label背景色
+                self.pe2.setColor(QPalette.Window, QColor(255, 255, 0))  # 设置背景颜色
+                self.lb_state2.setPalette(self.pe2)  # 设置label背景色
 
     # 测试结束后刷新UI等
     def test_end(self, ls):
         # 使用传回的返回值
         if (ls[2] == 1):
             self.le_time.setText(str(round(ls[0], 2)) + 's')
-            self.btn_start.setDisabled(False)
+            self.pb_start.setDisabled(False)
             self.actionStart.setDisabled(False)
             self.le_total.setText(str(int(self.le_total.text()) + 1))
             self.lb_state.setText(ls[1])
             if ls[1] == 'Pass':
                 self.le_pass.setText(str(int(self.le_pass.text()) + 1))
                 # self.lb_state.setText('Pass')
-                pe.setColor(QPalette.Window, QColor(0, 255, 0))  # 设置背景颜色
-                self.lb_state.setPalette(pe)  # 设置label背景色
+                self.pe.setColor(QPalette.Window, QColor(0, 255, 0))  # 设置背景颜色
+                self.lb_state.setPalette(self.pe)  # 设置label背景色
             else:
                 # self.lb_state.setText('Fail')
-                pe.setColor(QPalette.Window, QColor(255, 0, 0))  # 设置背景颜色
-                self.lb_state.setPalette(pe)  # 设置label背景色
+                self.pe.setColor(QPalette.Window, QColor(255, 0, 0))  # 设置背景颜色
+                self.lb_state.setPalette(self.pe)  # 设置label背景色
             y = int(self.le_pass.text()) / int(self.le_total.text())
             self.le_yield.setText(str("%.2f" % (y * 100)) + '%')
         else:
             self.le_time2.setText(str(round(ls[0], 2)) + 's')
-            self.btn_start.setDisabled(False)
+            self.pb_start.setDisabled(False)
             self.actionStart.setDisabled(False)
             self.le_total2.setText(str(int(self.le_total2.text()) + 1))
             if ls[1] == 'Pass':
                 self.le_pass2.setText(str(int(self.le_pass2.text()) + 1))
                 self.lb_state2.setText('Pass')
-                pe2.setColor(QPalette.Window, QColor(0, 255, 0))  # 设置背景颜色
-                self.lb_state2.setPalette(pe2)  # 设置label背景色
+                self.pe2.setColor(QPalette.Window, QColor(0, 255, 0))  # 设置背景颜色
+                self.lb_state2.setPalette(self.pe2)  # 设置label背景色
             else:
                 self.lb_state2.setText('Fail')
-                pe2.setColor(QPalette.Window, QColor(255, 0, 0))  # 设置背景颜色
-                self.lb_state2.setPalette(pe2)  # 设置label背景色
+                self.pe2.setColor(QPalette.Window, QColor(255, 0, 0))  # 设置背景颜色
+                self.lb_state2.setPalette(self.pe2)  # 设置label背景色
             y = int(self.le_pass2.text()) / int(self.le_total2.text())
             self.le_yield2.setText(str("%.2f" % (y * 100)) + '%')
 
@@ -406,15 +301,16 @@ class TestSeq(Ui_MainWindow,QMainWindow):
 
     # 开启或关闭单步测试
     def step_test(self):
-        log.loginfo.process_log('Step test')
         if(self.mystepbar.isChecked()):
             self.bwThread1.pause = True
             self.bwThread2.pause = True
             self.nextAction.setDisabled(False)
+            log.loginfo.process_log('Enable step test')
         else:
             self.bwThread1.pause = False
             self.bwThread2.pause = False
             self.nextAction.setDisabled(True)
+            log.loginfo.process_log('Disable step test')
 
     # 下一步测试
     def next_step(self):
@@ -430,6 +326,7 @@ class TestSeq(Ui_MainWindow,QMainWindow):
         self.bwThread2.pause = False
         self.actionPause.setDisabled(False)
         self.actionContinue.setDisabled(True)
+        log.loginfo.process_log('continue test')
 
     # 开启或关闭循环测试
     def enable_loop(self):
@@ -438,9 +335,11 @@ class TestSeq(Ui_MainWindow,QMainWindow):
             self.bwThread2.loop = True
             self.bwThread1.looptime = int(self.myeditbar.text())
             self.bwThread2.looptime = int(self.myeditbar.text())
+            log.loginfo.process_log('Enable loop test')
         else:
             self.bwThread1.loop = False
             self.bwThread2.loop = False
+            log.loginfo.process_log('Disable loop test')
 
     # 修改循环测试次数
     def edit_looptime(self):
@@ -448,7 +347,7 @@ class TestSeq(Ui_MainWindow,QMainWindow):
             self.bwThread1.looptime = int(self.myeditbar.text())
             self.bwThread2.looptime = int(self.myeditbar.text())
         except Exception as e:
-            print(e)
+            log.loginfo.process_log(str(e))
 
     # 测试过程中刷新UI，线程1
     def refresh_ui(self,ls):
@@ -537,6 +436,8 @@ class TestSeq(Ui_MainWindow,QMainWindow):
 
     # 切换到序列编辑页面，并且将Seq1的信息读取到表格
     def edit_sequence(self):
+        if (load.stationnum != '2'):
+            self.cb_seq.removeItem(1)
         self.tabWidget.setCurrentIndex(1)
         self.tableseq.clear()
         self.tableseq.setHorizontalHeaderLabels(['TestItem', 'Function', 'Mode', 'Low Limit', 'Up Limit', 'Next Step', 'Level'])
@@ -587,56 +488,92 @@ class TestSeq(Ui_MainWindow,QMainWindow):
             filepath = systempath.bundle_dir + '/CSV Files/Seq.csv'
         else:
             filepath = systempath.bundle_dir + '/CSV Files/Seq2.csv'
-        f = open(filepath, 'w')
+        f = open(filepath, 'w',encoding='utf8',newline='')
         writer = csv.writer(f)
         writer.writerow(['TestItem', 'Function', 'Mode', 'Low Limit', 'Up Limit', 'Next Step', 'Level'])
-        for i in range(50):
-            row = []
-            if (self.tableseq.item(i, 0) != None):
-                for j in range(7):
-                    if(j==2):
-                        if(self.tableseq.cellWidget(i, j).currentIndex()==0):
-                            row.append('test')
+        try:
+            for i in range(50):
+                row = []
+                if (self.tableseq.item(i, 0) != None):
+                    for j in range(7):
+                        if(j==2):
+                            if(self.tableseq.cellWidget(i, j).currentIndex()==0):
+                                row.append('test')
+                            else:
+                                row.append('skip')
+                        elif(j==5):
+                            if (self.tableseq.cellWidget(i, j).currentIndex() == 0):
+                                row.append('continue')
+                            else:
+                                row.append('finish')
+                        elif(j==6):
+                            if (self.tableseq.cellWidget(i, j).currentIndex() == 0):
+                                row.append('root')
+                            else:
+                                row.append('child')
                         else:
-                            row.append('skip')
-                    elif(j==5):
-                        if (self.tableseq.cellWidget(i, j).currentIndex() == 0):
-                            row.append('continue')
-                        else:
-                            row.append('finish')
-                    elif(j==6):
-                        if (self.tableseq.cellWidget(i, j).currentIndex() == 0):
-                            row.append('root')
-                        else:
-                            row.append('child')
-                    else:
-                        row.append(self.tableseq.item(i,j).text())
-                writer.writerow(row)
+                            row.append(self.tableseq.item(i,j).text())
+                    writer.writerow(row)
+        except Exception as e:
+            log.loginfo.process_log(str(e))
         f.close()
         self.load_sequence()
+
+    # 删除当前行
+    def delete_row(self):
+        self.tableseq.removeRow(self.tableseq.currentRow())
+
+    def insert_row(self):
+        row_cnt = self.tableseq.currentRow()
+        self.tableseq.insertRow(row_cnt)
+        for j in range(7):
+                if(j==2):
+                    self.MyCombo = QComboBox()
+                    self.MyCombo.addItem("test")
+                    self.MyCombo.addItem("skip")
+                    self.tableseq.setCellWidget(row_cnt, j, self.MyCombo)
+                elif(j==5):
+                    self.MyCombo1 = QComboBox()
+                    self.MyCombo1.addItem("continue")
+                    self.MyCombo1.addItem("finish")
+                    self.tableseq.setCellWidget(row_cnt, j, self.MyCombo1)
+                elif (j == 6):
+                    self.MyCombo2 = QComboBox()
+                    self.MyCombo2.addItem("root")
+                    self.MyCombo2.addItem("child")
+                    self.tableseq.setCellWidget(row_cnt, j, self.MyCombo2)
+                else:
+                    newItem1 = QTableWidgetItem('')
+                    self.tableseq.setItem(row_cnt, j, newItem1)
 
     # 切换到主界面
     def switch_to_mainwindow(self):
         self.tabWidget.setCurrentIndex(0)
 
-    # 切换到序列编辑页面
-    def switch_to_editwindow(self):
-        self.tabWidget.setCurrentIndex(1)
-
     # 切换用户
     def change_user(self):
         global user
+        user.le_pwd.setText('')
         user.show()
 
     # 刷新用户
     def refresh_user(self, ls):
         self.le_main_user.setText(ls[0])
+        self.authority()
+
 
     # 打开zmq调试工具
     def zmq_debug_tool(self):
         self.zmqtool.resize(self.width*0.5, self.height*0.5)
         self.zmqtool.lb_zmqtitle.setMaximumHeight(self.height*0.05)
         self.zmqtool.show()
+
+    # 打开用户管理界面
+    def user_management(self):
+        self.usertool.resize(self.width * 0.5, self.height * 0.5)
+        self.usertool.lb_usertitle.setMaximumHeight(self.height * 0.05)
+        self.usertool.get_users()
+        self.usertool.show()
 
     # 显示或隐藏toolbar
     def view_toolbar(self):
@@ -667,30 +604,18 @@ class TestSeq(Ui_MainWindow,QMainWindow):
         self.serialtool.show()
 
     # 切换到手动控制界面
-    def motion_debug_tool(self):
-        self.motion.read_io_config()
-        self.motion.read_axis_config()
+    def motion_debug(self):
         motionthread.auto.choose_axis(self.cb_axis.currentText())
-        self.motion.initialize_motion()
-        self.initialize_motion_ui()
         self.tabWidget.setCurrentIndex(2)
 
     # 初始化IO表，从配置文件中读取信息
     def initialize_motion_ui(self):
+        self.motion.read_io_config()
+        self.motion.read_axis_config()
         self.tw_io.setColumnCount(2)
         self.tw_io.setRowCount(len(self.motion.io_name) + 10)
         self.tw_io.setHorizontalHeaderLabels(['IO', 'Description'])
-        self.lb_axis.setMaximumWidth(self.width*0.1)
-        self.lb_axis.setMaximumHeight(self.height * 0.03)
-        self.lb_io.setMaximumWidth(self.width * 0.1)
-        self.lb_io.setMaximumHeight(self.height * 0.03)
-        self.cb_axis.setMaximumWidth(self.width * 0.2)
-        self.pb_jog1.setMaximumWidth(self.width*0.1)
-        self.pb_jog2.setMaximumWidth(self.width * 0.1)
-        self.pb_absolute.setMaximumWidth(self.width * 0.1)
-        self.pb_relative.setMaximumWidth(self.width * 0.1)
-        self.pb_stop.setMaximumWidth(self.width * 0.1)
-        self.pb_reset.setMaximumWidth(self.width * 0.1)
+        self.mapper = QtCore.QSignalMapper(self)
         i = 0
         for seq in self.motion.io_name:
             if(i != 0):
@@ -699,9 +624,19 @@ class TestSeq(Ui_MainWindow,QMainWindow):
                 self.tw_io.setCellWidget(i-1, 0, self.MyCheck)
                 newItem = QTableWidgetItem(self.motion.io_desc[i])
                 self.tw_io.setItem(i - 1, 1, newItem)
+
+                # 原始信号（表格中checkbox的鼠标点击信号）传递给map
+                self.tw_io.cellWidget(i - 1, 0).clicked.connect(self.mapper.map)
+                # 设置map信号的转发规则, 转发为参数为int类型的信号
+                self.mapper.setMapping(self.tw_io.cellWidget(i - 1, 0), i - 1)
             i = i+1
+
+        # map信号连接到自定义的槽函数，参数类型为int
+        self.mapper.mapped[int].connect(self.write_io)
+
         self.tw_io.horizontalHeader().setStretchLastSection(True)
         j = 0
+        self.cb_axis.clear()
         for seq in self.motion.axis_name:
             if(j != 0):
                 self.cb_axis.addItem(seq)
@@ -712,11 +647,19 @@ class TestSeq(Ui_MainWindow,QMainWindow):
         self.dsb_real_pos.setValue(ls[0])
         i = 0
         for io in ls[1]:
-            if(io == 1):
+            if(io == '1'):
                 self.tw_io.cellWidget(i, 0).setChecked(True)
             else:
                 self.tw_io.cellWidget(i, 0).setChecked(False)
             i = i + 1
+
+    # 写IO信号
+    def write_io(self, index):
+        if(self.tw_io.cellWidget(index,0).isChecked()==True):
+            value = 1
+        else:
+            value = 0
+        self.motion.write_io(index, value)
 
     # 解析zmq server收到的内容
     def recv_server(self, ls):
@@ -724,6 +667,7 @@ class TestSeq(Ui_MainWindow,QMainWindow):
             self.test_start()
 
     def refresh_log(self, msg):
+        self.te_log.setStyleSheet("color:blue")
         self.te_log.append(msg)
 
     # 运动相关函数
@@ -757,12 +701,11 @@ class TestSeq(Ui_MainWindow,QMainWindow):
         # 图像显示窗口坐标减去主窗口坐标
         imagexy = self.lb_image.mapToGlobal(-winxy)
         #self.vision.init_win(int(self.winId()),imagexy.y(),imagexy.x(),self.lb_image.width(),self.lb_image.height())
-        self.vision.init_win(0,imagexy.y(),imagexy.x(),self.lb_image.width(),self.lb_image.height())
+        #self.vision.init_win(0,imagexy.y(),imagexy.x(),self.lb_image.width(),self.lb_image.height())
+        #cams = self.vision.find_cameras(b'GigEVision')
 
-        cams = self.vision.find_cameras(b'GigEVision')
-
-        for cam in cams:
-            self.cb_camera.addItem(cam)
+        #for cam in cams:
+            #self.cb_camera.addItem(cam)
 
     def load_image(self):
         qimg = self.vision.load_image()
@@ -784,9 +727,6 @@ class TestSeq(Ui_MainWindow,QMainWindow):
 
     def snap(self):
         self.vision.snap()
-        # self.vision.snap(0)
-        # qimg = qimg.scaled(self.lb_image.width(), self.lb_image.height())
-        # self.lb_image.setPixmap(QPixmap(qimg))
 
     def live(self):
         self.vision.stoplive = False
@@ -801,11 +741,70 @@ class TestSeq(Ui_MainWindow,QMainWindow):
         qimg = img.scaled(self.lb_image.width(), self.lb_image.height())
         self.lb_image.setPixmap(QPixmap(qimg))
 
+    def open_sequence(self):
+        filename = QFileDialog.getOpenFileName(self, "open", systempath.bundle_dir + '/CSV Files', "Csv files(*.csv)")
+        if (platform.system() == "Windows"):
+            os.startfile(filename[0])
+        else:
+            import subprocess
+            subprocess.call(["open", filename[0]])
+
+    def open_result(self):
+        filename = QFileDialog.getOpenFileName(self, "open", systempath.bundle_dir + '/Result', "Csv files(*.csv)")
+        if (platform.system() == "Windows"):
+            os.startfile(filename[0])
+        else:
+            import subprocess
+            subprocess.call(["open", filename[0]])
+
+    def open_log(self):
+        filename = QFileDialog.getOpenFileName(self, "open", systempath.bundle_dir + '/Log',"Log files(*.log)")
+        if (platform.system() == "Windows"):
+            os.startfile(filename[0])
+        else:
+            import subprocess
+            subprocess.call(["open", filename[0]])
+
+    def authority(self):
+        if(self.le_main_user.text() == 'Administrator'):
+            self.actionPause.setVisible(True)
+            self.actionContinue.setVisible(True)
+            self.actionEdit.setVisible(True)
+            self.actionAutomation.setVisible(True)
+            self.actionOpen_CSV.setVisible(True)
+            self.actionReload_CSV.setVisible(True)
+            self.actionUser_Manage.setVisible(True)
+            self.actionEdit_Window.setVisible(True)
+            self.actionMotion_Window.setVisible(True)
+            self.actionVision_Window.setVisible(True)
+            self.mystepbar.setDisabled(False)
+            self.nextAction.setDisabled(False)
+            self.myloopbar.setDisabled(False)
+            self.myeditbar.setDisabled(False)
+
+        else:
+            self.actionPause.setVisible(False)
+            self.actionContinue.setVisible(False)
+            self.actionEdit.setVisible(False)
+            self.actionAutomation.setVisible(False)
+            self.actionOpen_CSV.setVisible(False)
+            self.actionReload_CSV.setVisible(False)
+            self.actionUser_Manage.setVisible(False)
+            self.actionEdit_Window.setVisible(False)
+            self.actionMotion_Window.setVisible(False)
+            self.actionVision_Window.setVisible(False)
+            self.mystepbar.setDisabled(True)
+            self.nextAction.setDisabled(True)
+            self.myloopbar.setDisabled(True)
+            self.myeditbar.setDisabled(True)
+
+
 if __name__ == '__main__':
     '''
     主函数
     '''
-    #QApplication.setStyle(QStyleFactory.create("Fusion"))
+    if(platform.system() == "Windows"):
+        QApplication.setStyle(QStyleFactory.create("Fusion"))   #Plastique
     scriptpath = systempath.bundle_dir+'/Scripts/testscript.py'
     app = QApplication(sys.argv)
     if(not os.path.exists(scriptpath)):
@@ -818,8 +817,5 @@ if __name__ == '__main__':
         app.exec_()
         if(user.loginok):
             seq = TestSeq()
-            icon = QtGui.QIcon()
-            icon.addPixmap(QtGui.QPixmap("Resource/icon.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
-            seq.setWindowIcon(icon)
             seq.showMaximized()
             sys.exit(app.exec_())

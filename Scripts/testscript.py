@@ -14,7 +14,6 @@ import log
 class TestFunc():
     def function1(self):
         time.sleep(0.2)
-        log.loginfo.process_log('123456')
         return[0.5, 0.1]
 
     def function2(self):

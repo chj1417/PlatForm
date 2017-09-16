@@ -19,11 +19,15 @@ from PyQt5.QtWidgets import QDialog, QMessageBox
 try:
     import testscript
 except Exception as e:
-    print(e)
+    log.loginfo.process_log(str(e))
 import copy
 
 def reload_scripts():
-    reload(testscript)
+    try:
+        reload(testscript)
+        log.loginfo.process_log('reload test script ok')
+    except Exception as e:
+        log.loginfo.process_log(e)
 
 # 测试线程类
 class TestThread(QtCore.QThread):
@@ -65,7 +69,6 @@ class TestThread(QtCore.QThread):
                 st_int = time.time()
                 st = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(st_int))
                 if self.load.seq_col3[i]!='skip':
-
                     k = getattr(self.ts, self.load.seq_col2[i])
                     self.ret = k()
                     log.loginfo.process_log('Test item: ' + self.load.seq_col2[i])
@@ -114,6 +117,7 @@ class TestThread(QtCore.QThread):
                     self.refresh.emit([j, tt, self.ret, 'Pause', self.threadnum])  #发送暂停测试信号，更新界面
                 # 发送测试结果并更新界面
                 self.refresh.emit([j, tt, self.ret, self.result, self.threadnum])
+                log.loginfo.process_log(self.load.seq_col2[i] + ' result:' + str(self.ret))
                 # 按了停止后结束测试
                 if(self.stop):
                     total_result = 'Break'

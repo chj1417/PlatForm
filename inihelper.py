@@ -13,16 +13,17 @@ import sys
 import os
 import load
 import systempath
-import log
 
-def read_ini(section, key):
+
+def read_ini(filename, section, key):
     cf = configparser.ConfigParser()
-    cf.read(systempath.bundle_dir + '/Config/Config.ini')
+    cf.read(filename)
     value = cf.get(section, key)
     return value
 
-def write_ini(section, key, value):
+def write_ini(filename, section, key, value):
     cf = configparser.ConfigParser()
+    cf.read(filename)
     cf.set(section, key, value)
     # write to file
-    cf.write(open(systempath.bundle_dir + '/Config/Config.ini', "w"))
+    cf.write(open(filename, "w"))

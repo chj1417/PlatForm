@@ -8,16 +8,18 @@ Update date：2017.7.20
 version 1.0.0
 """
 
-import sys, os
+import sys
+import os
+import inihelper
 
 frozen = 'not'
-
 if getattr(sys, 'frozen', False):
     # we are running in a bundle
-    print('exe')
     frozen = 'ever so'
     bundle_dir = os.path.dirname(sys.executable)
+
 else:
     # we are running in a normal Python environment
     bundle_dir = os.path.dirname(os.path.abspath(__file__))
+
 
