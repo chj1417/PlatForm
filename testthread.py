@@ -62,6 +62,7 @@ class TestThread(QtCore.QThread):
         i = 1
         # 主测试项的序号
         j = 0
+        print(self.load.seq_col1)
         for seq in range(len(self.load.seq_col1)-1):
             self.result = []
             if(self.load.seq_col7[i] == 'root'):
