@@ -19,6 +19,9 @@ class TestFunc():
     def __init__(self):
         self.zmq_open()
 
+    def __del__(self):
+        self.zmq_close()
+
     def zmq_open(self):
         self.con = zmq.Context()
         self.socket = self.con.socket(zmq.REQ)
@@ -28,69 +31,72 @@ class TestFunc():
         try:
             self.socket.connect('tcp://127.0.0.1:5000')
         except Exception as e:
-            log.process_log(str(e))
+            log.loginfo.process_log(str(e))
 
-    def zmq_comm(self):
+    def zmq_comm(self, msg):
         try:
-            time.sleep(0.5)
             #发送数据
-            #snd = self.socket.send_string('12345')
+            snd = self.socket.send_string(msg)
             #接收数据
-            #ret = self.socket.recv_string()
-            return ''
+            ret = self.socket.recv_string()
+            return ret
         except Exception as e:
-            #log.loginfo.process_log(str(e))
+            log.loginfo.process_log(str(e))
             return ''
 
-    def zeq_close(self):
+    def zmq_close(self):
         self.socket.close()
 
     def function1(self):
-        self.zmq_comm()
-        return[0.5, 0.1]
+        #self.zmq_comm('pretest')
+        time.sleep(1)
+        return[0.5, 0.5]
 
     def function2(self):
-        self.zmq_comm()
+        #self.zmq_comm('readimage')
+        time.sleep(0.5)
         return [10]
 
     def function3(self):
-        self.zmq_comm()
-        return [3.0]
+        #ret = self.zmq_comm('getimagesize')
+        time.sleep(0.5)
+        return [0]
 
     def function4(self):
-        self.zmq_comm()
+        #self.zmq_comm('posttest')
+        time.sleep(0.5)
         return [0.5]
 
     def function5(self):
-        self.zmq_comm()
+        time.sleep(0.5)
         return [0.5]
 
     def function6(self):
-        self.zmq_comm()
+        time.sleep(0.5)
         return [0.5]
 
     def function7(self):
-        self.zmq_comm()
+        time.sleep(0.5)
         return [0.5]
 
     def function8(self):
-        self.zmq_comm()
+        time.sleep(0.5)
         return [0.9]
 
     def function9(self):
-        self.zmq_comm()
+        time.sleep(0.5)
         return [0.9]
 
     def function10(self):
-        self.zmq_comm()
+        time.sleep(0.5)
         return [0.5]
 
     def function11(self):
-        self.zmq_comm()
+        time.sleep(0.5)
         return [0.9]
 
     def function12(self):
-        self.zmq_comm()
+        time.sleep(0.5)
         return [0.9]
 
 class TestFunc2():
