@@ -28,19 +28,20 @@ import zmqserver
 import visionthread
 from ctypes import *
 from uiprocess import *
+sys.path.append(systempath.bundle_dir + '/UI')
 
 
 class TestSeq(UIProcess, QMainWindow):
     def __init__(self, parent=None):
         super(TestSeq, self).__init__(parent)
         # 按钮槽函数连接
-        self.pb_stop.clicked.connect(self.test_break)
-        self.pb_start.clicked.connect(self.test_start)
         self.pb_saveseq.clicked.connect(self.save_sequence)
         self.pb_delrow.clicked.connect(self.delete_row)
         self.pb_insertrow.clicked.connect(self.insert_row)
         self.actionReload_CSV.triggered.connect(self.load_sequence)
         self.cb_seq.currentIndexChanged.connect(self.edit_sequence)
+
+        self.tabWidget.currentChanged.connect(self.change_tab_view)
         # 菜单项槽函数连接       ﻿
         self.actionReload_Scripts.triggered.connect(self.reload_scripts)
         self.actionLogin.triggered.connect(self.change_user)
@@ -73,28 +74,21 @@ class TestSeq(UIProcess, QMainWindow):
         self.mystepbar.clicked.connect(self.step_test)
         # 两个树形控件的root items
         self.root1 = []
-        self.root2 = []
         self.load1 = load.Load('Seq.csv')
-        self.load2 = load.Load('Seq2.csv')
         self.bwThread1 = testthread.TestThread(self.load1, 1)
-        self.bwThread2 = testthread.TestThread(self.load2, 2)
         # 连接子进程的信号和槽函数
         self.bwThread1.finishSignal.connect(self.test_end)
         self.bwThread1.refresh.connect(self.refresh_ui)
-        self.bwThread2.finishSignal.connect(self.test_end)
-        self.bwThread2.refresh.connect(self.refresh_ui2)
         self.bwThread1.refreshloop.connect(self.loop_refresh)
-        self.bwThread2.refreshloop.connect(self.loop_refresh)
         # 实例化log类
         log.loginfo = log.Log()
         log.loginfo.refreshlog.connect(self.refresh_log)
         # 加载sequence
         self.load1.load_seq()
-        self.load2.load_seq()
         log.loginfo.process_log('Load sequence')
         self.initialize_sequence()
         # 初始化用户名
-        self.le_main_user.setText(UserManager.username)
+        self.lb_main_user.setText(UserManager.username)
         # 开启zmq server
         self.zmq = zmqserver.ZmqComm()
         self.zmq.zmqrecvsingnal.connect(self.recv_server)
@@ -118,7 +112,6 @@ class TestSeq(UIProcess, QMainWindow):
         self.pb_jog1.released.connect(self.axis_stop)
         self.pb_jog2.pressed.connect(self.jog_backward)
         self.pb_jog2.released.connect(self.axis_stop)
-        self.pb_stop.clicked.connect(self.axis_stop)
         self.pb_absolute.clicked.connect(self.absolute_run)
         self.pb_relative.clicked.connect(self.relative_run)
         self.cb_axis.currentIndexChanged.connect(self.change_axis)
@@ -136,37 +129,16 @@ class TestSeq(UIProcess, QMainWindow):
 
     # 初始化测试序列
     def initialize_sequence(self):
-        if(load.stationnum == '2'):
-            self.testlist.setColumnWidth(0, self.width*0.25)
-            self.testlist2.setColumnWidth(0, self.width * 0.25)
-            self.group2.setVisible(True)
-            self.pbar2.setVisible(True)
-            self.testlist2.setVisible(True)
-            self.le_time2.setText('0')
-            self.le_pass2.setText('0')
-            self.le_total2.setText('0')
-            self.le_yield2.setText('0')
-            self.lb_state2.setText('Pass')
-            self.pe2.setColor(QPalette.Window, QColor(0, 255, 0))  # 设置背景颜色
-            self.lb_state2.setPalette(self.pe2)  # 设置label背景色
-            self.root1 = self.initialize_tree(self.testlist, self.load1.seq_col1, self.load1.seq_col7)
-            self.root2 = self.initialize_tree(self.testlist2, self.load2.seq_col1, self.load2.seq_col7)
-            self.pbar.setRange(0, len(self.root1) - 1)
-            self.pbar2.setRange(0, len(self.root2) - 1)
-        else:
-            self.testlist.setColumnWidth(0, self.width * 0.5)
-            self.group2.setVisible(False)
-            self.pbar2.setVisible(False)
-            self.testlist2.setVisible(False)
-            self.root1 = self.initialize_tree(self.testlist, self.load1.seq_col1, self.load1.seq_col7)
-            self.pbar.setRange(0, len(self.root1) - 1)
+        self.testlist.setColumnWidth(0, self.width * 0.5)
+        self.root1 = self.initialize_tree(self.testlist, self.load1.seq_col1, self.load1.seq_col7)
+        self.pbar.setRange(0, len(self.root1) - 1)
 
     # 初始化显示测试信息的树形结构
     def initialize_tree(self, tree, items, levels):
         log.loginfo.process_log('Initialize sequence tree')
         tree.setColumnCount(4)
         tree.setHeaderLabels(['TestItems', 'Test Time', 'TestData', 'TestResult'])
-        tree.header().setStyleSheet("Background-color:rgb(88, 160, 200);border-radius:14px;")
+        # tree.header().setStyleSheet("Background-color:rgb(88, 160, 200);border-radius:14px;")
         # 设置行高为25
         tree.setStyleSheet("QTreeWidget::item{height:%dpx}"%int(self.height*0.03))
         tree.header().setStretchLastSection(True)
@@ -190,10 +162,6 @@ class TestSeq(UIProcess, QMainWindow):
         self.load1.load_seq()
         self.testlist.clear()
         self.root1 = self.initialize_tree(self.testlist, self.load1.seq_col1, self.load1.seq_col7)
-        if (load.stationnum == '2'):
-            self.load2.load_seq()
-            self.testlist2.clear()
-            self.root2 = self.initialize_tree(self.testlist2, self.load2.seq_col1, self.load2.seq_col7)
 
     def reload_scripts(self):
         log.loginfo.process_log('Reload scripts')
@@ -205,97 +173,59 @@ class TestSeq(UIProcess, QMainWindow):
         if (self.bwThread1.seq_end):
             if(self.bwThread1.looptime != 0):                     # 确保最后一次只更新循环次数
                 self.clear_seq(self.root1, self.pbar)
-                self.lb_state.setText('Testing...')
+                self.set_state('Testing')
                 self.pe.setColor(QPalette.Window, QColor(255, 255, 0))  # 设置背景颜色
-                self.lb_state.setPalette(self.pe)  # 设置label背景色
-            if (load.stationnum == '2'):
-                self.myeditbar.setText(str(self.bwThread1.looptime) + '  ' + str(self.bwThread2.looptime))
-            else:
                 self.myeditbar.setText(str(self.bwThread1.looptime))
-
-        # 单工位时不运行
-        if (load.stationnum == '2'):
-            if (self.bwThread2.seq_end):
-                if(self.bwThread2.looptime != 0):                 # 确保最后一次只更新循环次数
-                    self.clear_seq(self.root2, self.pbar2)
-                    self.lb_state2.setText('Testing...')
-                    self.pe2.setColor(QPalette.Window, QColor(255, 255, 0))  # 设置背景颜色
-                    self.lb_state2.setPalette(self.pe2)  # 设置label背景色
-                self.myeditbar.setText(str(self.bwThread1.looptime) + '  ' + str(self.bwThread2.looptime))
 
     # 开始测试
     def test_start(self):
         log.loginfo.process_log('Start test')
         self.bwThread1.stop = False
-        self.bwThread2.stop = False
-        self.pb_start.setDisabled(True)
         self.actionStart.setDisabled(True)
+        self.myloopbar.setDisabled(True)
+        self.myeditbar.setDisabled(True)
         # 开始执行 run() 函数里的内容,只有测试结束了的线程才能开始
         if(self.bwThread1.seq_end):
             self.clear_seq(self.root1,self.pbar)
             self.bwThread1.start()
-            self.lb_state.setText('Testing...')
+            self.set_state('Testing')
             self.pe.setColor(QPalette.Window, QColor(255, 255, 0))  # 设置背景颜色
-            self.lb_state.setPalette(self.pe)  # 设置label背景色
-        # 单工位时不运行
-        if (load.stationnum == '2'):
-            if (self.bwThread2.seq_end):
-                self.clear_seq(self.root2, self.pbar2)
-                self.bwThread2.start()
-                self.lb_state2.setText('Testing...')
-                self.pe2.setColor(QPalette.Window, QColor(255, 255, 0))  # 设置背景颜色
-                self.lb_state2.setPalette(self.pe2)  # 设置label背景色
 
     # 测试结束后刷新UI等
     def test_end(self, ls):
         # 使用传回的返回值
-        if (ls[2] == 1):
-            self.le_time.setText(str(round(ls[0], 2)) + 's')
-            self.pb_start.setDisabled(False)
-            self.actionStart.setDisabled(False)
-            self.le_total.setText(str(int(self.le_total.text()) + 1))
-            self.lb_state.setText(ls[1])
-            if ls[1] == 'Pass':
-                self.le_pass.setText(str(int(self.le_pass.text()) + 1))
-                # self.lb_state.setText('Pass')
-                self.pe.setColor(QPalette.Window, QColor(0, 255, 0))  # 设置背景颜色
-                self.lb_state.setPalette(self.pe)  # 设置label背景色
-            else:
-                # self.lb_state.setText('Fail')
-                self.pe.setColor(QPalette.Window, QColor(255, 0, 0))  # 设置背景颜色
-                self.lb_state.setPalette(self.pe)  # 设置label背景色
-            y = int(self.le_pass.text()) / int(self.le_total.text())
-            self.le_yield.setText(str("%.2f" % (y * 100)) + '%')
+
+        #self.le_time.setText(str(round(ls[0], 2)) + 's')
+        if(self.myloopbar.isChecked()==True and self.myeditbar.text()!='1'):
+            self.actionStart.setDisabled(True)
+            self.myloopbar.setDisabled(True)
+            self.myeditbar.setDisabled(True)
         else:
-            self.le_time2.setText(str(round(ls[0], 2)) + 's')
-            self.pb_start.setDisabled(False)
             self.actionStart.setDisabled(False)
-            self.le_total2.setText(str(int(self.le_total2.text()) + 1))
-            if ls[1] == 'Pass':
-                self.le_pass2.setText(str(int(self.le_pass2.text()) + 1))
-                self.lb_state2.setText('Pass')
-                self.pe2.setColor(QPalette.Window, QColor(0, 255, 0))  # 设置背景颜色
-                self.lb_state2.setPalette(self.pe2)  # 设置label背景色
-            else:
-                self.lb_state2.setText('Fail')
-                self.pe2.setColor(QPalette.Window, QColor(255, 0, 0))  # 设置背景颜色
-                self.lb_state2.setPalette(self.pe2)  # 设置label背景色
-            y = int(self.le_pass2.text()) / int(self.le_total2.text())
-            self.le_yield2.setText(str("%.2f" % (y * 100)) + '%')
+            self.myloopbar.setDisabled(False)
+            self.myeditbar.setDisabled(False)
+
+        #self.le_total.setText(str(int(self.le_total.text()) + 1))
+        self.set_state(ls[1])
+        self.set_count(ls[1])
+        if ls[1] == 'Pass':
+            #self.le_pass.setText(str(int(self.le_pass.text()) + 1))
+            self.pe.setColor(QPalette.Window, QColor(0, 255, 0))  # 设置背景颜色
+        else:
+            self.pe.setColor(QPalette.Window, QColor(255, 0, 0))  # 设置背景颜色
+        #y = int(self.le_pass.text()) / int(self.le_total.text())
+        #self.le_yield.setText(str("%.2f" % (y * 100)) + '%')
 
     # 中止测试
     def test_break(self):
         log.loginfo.process_log('Break test')
         self.bwThread1.stop = True
-        self.bwThread2.stop = True
-        self.lb_state.setText('Break')
-        self.lb_state2.setText('Break')
+        self.set_state('Break')
 
     # 暂停测试
     def test_pause(self):
         log.loginfo.process_log('Pause test')
         self.bwThread1.pause = True
-        self.bwThread2.pause = True
         self.actionPause.setDisabled(True)
         self.actionContinue.setDisabled(False)
 
@@ -303,27 +233,22 @@ class TestSeq(UIProcess, QMainWindow):
     def step_test(self):
         if(self.mystepbar.isChecked()):
             self.bwThread1.pause = True
-            self.bwThread2.pause = True
             self.nextAction.setDisabled(False)
             log.loginfo.process_log('Enable step test')
         else:
             self.bwThread1.pause = False
-            self.bwThread2.pause = False
             self.nextAction.setDisabled(True)
             log.loginfo.process_log('Disable step test')
 
     # 下一步测试
     def next_step(self):
         self.bwThread1.pause = False
-        self.bwThread2.pause = False
         time.sleep(0.1)
         self.bwThread1.pause = True
-        self.bwThread2.pause = True
 
     # 暂停后继续测试
     def continue_tool(self):
         self.bwThread1.pause = False
-        self.bwThread2.pause = False
         self.actionPause.setDisabled(False)
         self.actionContinue.setDisabled(True)
         log.loginfo.process_log('continue test')
@@ -332,20 +257,16 @@ class TestSeq(UIProcess, QMainWindow):
     def enable_loop(self):
         if(self.myloopbar.isChecked()):
             self.bwThread1.loop = True
-            self.bwThread2.loop = True
             self.bwThread1.looptime = int(self.myeditbar.text())
-            self.bwThread2.looptime = int(self.myeditbar.text())
             log.loginfo.process_log('Enable loop test')
         else:
             self.bwThread1.loop = False
-            self.bwThread2.loop = False
             log.loginfo.process_log('Disable loop test')
 
     # 修改循环测试次数
     def edit_looptime(self):
         try:
             self.bwThread1.looptime = int(self.myeditbar.text())
-            self.bwThread2.looptime = int(self.myeditbar.text())
         except Exception as e:
             log.loginfo.process_log(str(e))
 
@@ -386,42 +307,6 @@ class TestSeq(UIProcess, QMainWindow):
             for i in range(0,4):
                 self.root1[ls[0]].setBackground(i, QBrush(QColor(255,255,255)))
 
-    # 测试过程中刷新UI，线程2
-    def refresh_ui2(self, ls):
-        if (len(ls[2]) != 1):
-            for i in range(len(ls[2])):
-                self.root2[ls[0]].child(i).setText(2, str(ls[2][i]))
-                self.root2[ls[0]].child(i).setText(3, ls[3][i])
-
-        ls[2] = str(ls[2])[1:len(str(ls[2])) - 1]
-
-        for i in range(1, 4):
-            if (i != 3):
-                self.root2[ls[0]].setText(i, str(ls[i]))
-            else:
-                if ('Fail' in ls[i]):
-                    self.root2[ls[0]].setText(i, 'Fail')
-                elif (ls[i][0] == 'Skip'):
-                    self.root2[ls[0]].setText(i, 'Skip')
-                else:
-                    self.root2[ls[0]].setText(i, 'Pass')
-
-        if ls[3] == "Testing":
-            for i in range(0, 4):
-                self.root2[ls[0]].setBackground(i, QBrush(QColor(0, 255, 100)))
-        elif "Fail" in ls[3]:
-            self.pbar2.setValue(ls[0])
-            for i in range(0, 4):
-                self.root2[ls[0]].setBackground(i, QBrush(QColor(255, 0, 0)))
-        elif ls[3] == 'Pause':
-            self.pbar2.setValue(ls[0])
-            for i in range(0, 4):
-                self.root2[ls[0]].setBackground(i, QBrush(QColor(255, 255, 0)))
-        else:
-            self.pbar2.setValue(ls[0])
-            for i in range(0, 4):
-                self.root2[ls[0]].setBackground(i, QBrush(QColor(255, 255, 255)))
-
     # 清除除了测试名称外测试树形结构的其他内容以及进度条
     def clear_seq(self, tree, bar):
         bar.setValue(0)
@@ -436,11 +321,9 @@ class TestSeq(UIProcess, QMainWindow):
 
     # 切换到序列编辑页面，并且将Seq1的信息读取到表格
     def edit_sequence(self):
-        if (load.stationnum != '2'):
-            self.cb_seq.removeItem(1)
         self.tabWidget.setCurrentIndex(1)
-        self.tableseq.clear()
-        self.tableseq.setHorizontalHeaderLabels(['TestItem', 'Function', 'Mode', 'Low Limit', 'Up Limit', 'Next Step', 'Level'])
+        #self.tableseq.clear()
+
         if(self.cb_seq.currentIndex() == 0):
             items = [self.load1.seq_col1, self.load1.seq_col2, self.load1.seq_col3, self.load1.seq_col4,
                      self.load1.seq_col5, self.load1.seq_col6, self.load1.seq_col7]
@@ -546,6 +429,15 @@ class TestSeq(UIProcess, QMainWindow):
                     newItem1 = QTableWidgetItem('')
                     self.tableseq.setItem(row_cnt, j, newItem1)
 
+    def change_tab_view(self):
+        index=self.tabWidget.currentIndex()
+        if(index==1):
+            self.edit_sequence()
+        elif (index == 2):
+            self.motion_debug()
+        elif (index == 3):
+            self.switch_to_visionwindow()
+
     # 切换到主界面
     def switch_to_mainwindow(self):
         self.tabWidget.setCurrentIndex(0)
@@ -558,7 +450,7 @@ class TestSeq(UIProcess, QMainWindow):
 
     # 刷新用户
     def refresh_user(self, ls):
-        self.le_main_user.setText(ls[0])
+        self.lb_main_user.setText(ls[0])
         self.authority()
 
 
@@ -766,7 +658,7 @@ class TestSeq(UIProcess, QMainWindow):
             subprocess.call(["open", filename[0]])
 
     def authority(self):
-        if(self.le_main_user.text() == 'Administrator'):
+        if(self.lb_main_user.text() == 'Administrator'):
             self.actionPause.setVisible(True)
             self.actionContinue.setVisible(True)
             self.actionEdit.setVisible(True)
@@ -803,10 +695,17 @@ if __name__ == '__main__':
     '''
     主函数
     '''
+    print(QStyleFactory.keys())
     if(platform.system() == "Windows"):
         QApplication.setStyle(QStyleFactory.create("Fusion"))   #Plastique
+        font = QtGui.QFont()
+        font.setPointSize(10);
+        font.setFamily(("arial"))
+        QApplication.setFont(font)
+
     scriptpath = systempath.bundle_dir+'/Scripts/testscript.py'
     app = QApplication(sys.argv)
+    app.setStyleSheet("QTabWidget { background-color: rgb(207, 207, 207) }")
     if(not os.path.exists(scriptpath)):
         QMessageBox.information(None, ("Warning!"), ("Script Error!"), QMessageBox.StandardButton(QMessageBox.Ok))
     else:

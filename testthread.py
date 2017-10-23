@@ -22,12 +22,13 @@ except Exception as e:
     log.loginfo.process_log(str(e))
 import copy
 
+
 def reload_scripts():
     try:
         reload(testscript)
         log.loginfo.process_log('reload test script ok')
     except Exception as e:
-        log.loginfo.process_log(e)
+        log.loginfo.process_log(str(e))
 
 # 测试线程类
 class TestThread(QtCore.QThread):
@@ -49,10 +50,7 @@ class TestThread(QtCore.QThread):
         self.loop = False
         self.looptime = 0
     def test_func(self):
-        if(self.threadnum == 1):
-            self.ts = testscript.TestFunc()
-        else:
-            self.ts = testscript.TestFunc2()
+        self.ts = testscript.TestFunc()
         self.seq_end = False
         total_time = 0
         total_result = 'Pass'
@@ -62,7 +60,6 @@ class TestThread(QtCore.QThread):
         i = 1
         # 主测试项的序号
         j = 0
-        print(self.load.seq_col1)
         for seq in range(len(self.load.seq_col1)-1):
             self.result = []
             if(self.load.seq_col7[i] == 'root'):

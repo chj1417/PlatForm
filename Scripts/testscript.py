@@ -49,7 +49,7 @@ class TestFunc():
 
     def function1(self):
         #self.zmq_comm('pretest')
-        time.sleep(1)
+        time.sleep(2)
         return[0.5, 0.5]
 
     def function2(self):
@@ -93,56 +93,6 @@ class TestFunc():
 
     def function11(self):
         time.sleep(0.5)
-        return [0.9]
-
-    def function12(self):
-        time.sleep(0.5)
-        return [0.9]
-
-class TestFunc2():
-
-    def function1(self):
-        time.sleep(0.2)
-        return[0.5, 0.6]
-
-    def function2(self):
-        time.sleep(0.5)
-        return [0.1]
-
-    def function3(self):
-        time.sleep(0.3)
-        return [0.5]
-
-    def function4(self):
-        time.sleep(0.5)
-        return [0.5]
-
-    def function5(self):
-        time.sleep(0.4)
-        return [0.5]
-
-    def function6(self):
-        time.sleep(0.2)
-        return [0.5]
-
-    def function7(self):
-        time.sleep(0.3)
-        return [0.5]
-
-    def function8(self):
-        time.sleep(0.4)
-        return [0.9]
-
-    def function9(self):
-        time.sleep(0.5)
-        return [0.9]
-
-    def function10(self):
-        time.sleep(0.2)
-        return [0.5]
-
-    def function11(self):
-        time.sleep(0.4)
         return [0.9]
 
     def function12(self):

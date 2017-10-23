@@ -7,16 +7,16 @@ description: 用户登陆
 Update date：2017.7.20
 version 1.0.0
 """
-
+import sys
+import systempath
+sys.path.append(systempath.bundle_dir + '/Module')
+sys.path.append(systempath.bundle_dir + '/Scripts')
+sys.path.append(systempath.bundle_dir + '/UI')
 from PyQt5.QtWidgets import QDialog, QMessageBox, QDesktopWidget
 from PyQt5.QtGui import QPixmap
 from loginwindow import *
-import systempath
-import sys
 import time
 import base64
-sys.path.append(systempath.bundle_dir + '/Module')
-sys.path.append(systempath.bundle_dir + '/Scripts')
 import log
 import inihelper
 
