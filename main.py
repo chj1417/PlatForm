@@ -9,14 +9,14 @@ version 1.0.0
 """
 
 from login import *
-import systempath
+import systempath #导入自定义
 import sys
 import csv
 import load
 import log
 import os
 import platform
-import inihelper
+import inihelper #导入自定义
 from mainwindow import *
 from tcptool import *
 from zmqtool import *
